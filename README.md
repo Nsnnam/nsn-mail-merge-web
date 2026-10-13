@@ -5,7 +5,7 @@
 > Tuân thủ chuẩn **NSN App Standard** · Offline 100% Client-Side trong bộ nhớ trình duyệt.
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Online-blue?style=flat-square&logo=github)](https://Nsnnam.github.io/nsn-mail-merge-web/)
-[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.4-emerald?style=flat-square)](CHANGELOG.md)
+[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.5-emerald?style=flat-square)](CHANGELOG.md)
 [![Tác giả](https://img.shields.io/badge/Tác_giả-Nguyễn_Sơn_Nam-indigo?style=flat-square)](AUTHORS.md)
 [![Ủng hộ](https://img.shields.io/badge/Mời_cà_phê-BIDV_8855989777-amber?style=flat-square)](SUPPORT.md)
 
@@ -14,6 +14,7 @@
 ## 🌟 Tính năng nổi bật
 
 1. **Giao diện hiện đại & Tối ưu không gian làm việc**:
+   - **Mặc định Chế độ Soạn thảo (Edit Mode)**: Khi import hoặc nạp tệp, trang web lập tức mở chế độ soạn thảo giúp người dùng thao tác định dạng và chèn biến ngay mà không cần thêm thao tác chuyển đổi.
    - **Mặc định hiển thị bảng nạp tệp**: Khi khởi tạo trang web, bảng nạp tệp hiển thị rõ ràng, thân thiện; sau khi người dùng nạp file Word và Excel, bảng sẽ tự động thu gọn để tối ưu hóa diện tích làm việc.
    - **Nạp nhiều file cùng lúc & Xóa hàng loạt**: Cho phép kéo thả hoặc chọn nhiều file Word (.docx) và nhiều file Excel (.xlsx) cùng lúc, kèm bảng quản lý tệp, chuyển đổi nhanh giữa các mẫu và xóa hàng loạt (Bulk Delete).
    - **6 Chủ đề Gradient cao cấp**: Xanh Biển Hiện Đại (Ocean), Hoàng Hôn Tím Hồng (Sunset), Ngọc Bích Công Nghệ (Emerald), Đêm Huyền Bí (Midnight), Hổ Phách Năng Lượng (Amber), Cực Quang Xanh (Aurora) lan tỏa toàn diện từ thanh tiêu đề, viền phát sáng đến các nút bấm thao tác.
@@ -21,21 +22,30 @@
    - **Bố cục 2 cột thông minh**: Cột trái chứa trang văn bản Word A4 cuộn độc lập mượt mà; cột phải chứa **Cột Excel khả dụng** luôn ghim cố định (`sticky`), hỗ trợ tìm kiếm cột và đối chiếu nhanh.
 2. **Bảo toàn 100% định dạng, màu sắc & Bảng biểu Word gốc**:
    - Tích hợp bộ phân tích OpenXML trực tiếp: Bảo toàn màu sắc văn bản (Heading blue, text color, highlight, shading), đường viền bảng biểu (TableGrid), độ rộng từng cột và căn lề.
+   - **Bảo toàn Tab spacer & Dấu cách liên tiếp**: Không bị HTML thu gọn nhiều khoảng trắng (Họ tên, Giới tính, Ngày sinh, SĐT... giữ trọn vẹn khoảng cách phân tách).
+   - **Chuẩn hóa bảng biểu**: Tự động căn giữa cột STT và dòng tiêu đề, lọc bỏ các dòng rỗng cuối ô ngăn chặn khoảng trống dọc thừa.
    - Tự động nhận diện và chuyển hóa các trường trộn bản địa của Microsoft Word (`MERGEFIELD`) sang cú pháp thẻ `{{Tên_Cột}}`.
    - Mặc định kích hoạt chế độ **"Giữ nguyên định dạng ban đầu của file Word gốc"**.
-3. **Chèn biến chính xác vào con trỏ & Bôi đen**:
+3. **Bộ công cụ Soạn thảo WYSIWYG & Table Suite toàn diện**:
+   - **Bộ công cụ Bảng biểu (Table Suite)**: Thêm/xóa dòng phía trên/dưới, thêm/xóa cột bên trái/phải, xóa bảng, căn lề ô (trái/giữa/phải/đều), căn dọc ô (đỉnh/giữa/đáy), đổi màu nền ô, cấu hình viền bảng (nét liền/bỏ viền) và tạo bảng tùy biến kích thước hàng x cột.
+   - **Hỗ trợ phím Tab trực tiếp**: Nhấn phím Tab trong trình soạn thảo để nhảy thụt dòng chuẩn xác.
+   - **Ký tự đặc biệt & Ô kiểm**: Chèn nhanh dấu tích (✓, ✔), ô vuông kiểm tra (☐, ☑), mũi tên, dấu sao, bullet.
+   - Undo/Redo, H1/H2/H3/Normal, cỡ chữ (10pt - 24pt), giãn dòng (1.0 - 2.0), bảng chọn màu chữ & màu highlight, in đậm, in nghiêng, gạch chân, gạch ngang, chỉ số trên/dưới ($X^2$, $X_2$), căn lề 4 hướng, danh sách, thụt lề, kẻ ngang, xóa định dạng.
+4. **Kho mẫu văn bản & Sao lưu / Phục hồi (.JSON)**:
+   - Lưu trữ các mẫu văn bản đã chỉnh sửa vào `localStorage` trình duyệt.
+   - Xuất/Tải file sao lưu `.JSON` về máy tính cá nhân để lưu trữ lâu dài.
+   - Khôi phục nhanh chóng kho mẫu từ file `.JSON` bất kỳ lúc nào.
+5. **Chèn biến chính xác vào con trỏ & Bôi đen**:
    - **Khi bôi đen chữ**: Bấm nút *"+ Chèn vào con trỏ"* sẽ **xóa và thay thế đè đúng đoạn chữ đang bôi đen** bằng thẻ `{{Tên_Cột}}`.
    - **Khi con trỏ đang nhấp nháy**: Biến được chèn chuẩn xác ngay tại vị trí con trỏ (kể cả trong bảng biểu).
-4. **Bộ thanh công cụ Soạn thảo chuyên sâu kiểu Microsoft Word**:
-   - Undo/Redo, H1/H2/H3/Normal, cỡ chữ (11pt - 24pt), bảng chọn màu chữ & màu highlight, in đậm, in nghiêng, gạch chân, gạch ngang, căn lề 4 hướng, danh sách, thụt lề, chèn bảng biểu 3x3, kẻ ngang, xóa định dạng.
-5. **In A4 cách ly sạch sẽ & Xuất PDF**:
+6. **In A4 cách ly sạch sẽ & Xuất PDF**:
    - Áp dụng cơ chế in qua `iframe` cách ly độc lập và CSS `@media print` nghiêm ngặt: **CHỈ in duy nhất trang văn bản A4**, loại bỏ 100% header, footer, thanh sidebar và nút bấm của web.
    - Nội dung biến chèn vào khi in **kế thừa 100% định dạng** (màu sắc, in đậm/nghiêng) của văn bản xung quanh, không còn khung viền hay nền xanh.
-6. **Xuất Word linh hoạt**:
+7. **Xuất Word linh hoạt**:
    - **Xuất .DOCX (Bản ghi này)**: Giữ nguyên 100% định dạng, bảng biểu, lề trang của Word gốc.
    - **Gộp 1 file .DOCX (Tất cả bản ghi)**: Gộp toàn bộ danh sách dữ liệu vào **1 file Word duy nhất**, mỗi bản ghi được ngắt trang chuẩn OpenXML `<w:br w:type="page"/>`.
    - **Gói .ZIP**: Trộn và đóng gói mỗi bản ghi thành 1 file docx riêng trong file nén ZIP.
-7. **Bảo mật tuyệt đối 100% Client-Side**:
+8. **Bảo mật tuyệt đối 100% Client-Side**:
    - Toàn bộ dữ liệu xử lý trong RAM trình duyệt, không gửi dữ liệu ra máy chủ ngoài.
    - Phát hành kèm bản **Single-file HTML Offline** chạy độc lập không cần mạng.
 
@@ -46,7 +56,7 @@
 - **Phiên bản Online (GitHub Pages):**  
   👉 **[https://Nsnnam.github.io/nsn-mail-merge-web/](https://Nsnnam.github.io/nsn-mail-merge-web/)**
 - **Phiên bản Offline (Single HTML):**  
-  File phát hành: `releases/namns-mergeword-v1.0.4-offline.html` (nhấp đúp chuột là mở chạy ngay).
+  File phát hành: `releases/namns-mergeword-v1.0.5-offline.html` (nhấp đúp chuột là mở chạy ngay).
 
 ---
 

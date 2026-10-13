@@ -70,6 +70,11 @@ export function parseDocxToHtml(arrayBuffer: ArrayBuffer): string | null {
         .replace(/>/g, '&gt;');
     }
 
+    // Bảo toàn nhiều dấu cách liên tiếp (không bị HTML thu gọn thành 1 dấu cách)
+    function preserveSpaces(str: string): string {
+      return str.replace(/ {2,}/g, match => '&nbsp;'.repeat(match.length));
+    }
+
     function parseRuns(pXml: string): string {
       let html = '';
       const runMatches = pXml.match(/<w:r\b[\s\S]*?<\/w:r>|<w:hyperlink\b[\s\S]*?<\/w:hyperlink>/g) || [];
@@ -93,11 +98,12 @@ export function parseDocxToHtml(arrayBuffer: ArrayBuffer): string | null {
         let token;
         while ((token = tokenRegex.exec(r)) !== null) {
           if (token[0].startsWith('<w:tab')) {
-            textParts.push('&emsp;&emsp;');
+            // Giữ tab stop với khoảng đệm inline rõ ràng
+            textParts.push('<span class="word-tab" style="display:inline-block; min-width: 3.5rem;">&emsp;&emsp;</span>');
           } else if (token[0].startsWith('<w:br')) {
             textParts.push('<br>');
           } else if (token[1] !== undefined) {
-            textParts.push(escapeHtml(token[1]));
+            textParts.push(preserveSpaces(escapeHtml(token[1])));
           }
         }
 
@@ -134,7 +140,7 @@ export function parseDocxToHtml(arrayBuffer: ArrayBuffer): string | null {
       return html;
     }
 
-    function parseParagraph(pXml: string): string {
+    function parseParagraph(pXml: string, _inTable: boolean = false, defaultAlign: string = ''): string {
       const pPrMatch = pXml.match(/<w:pPr>([\s\S]*?)<\/w:pPr>/);
       const pPrContent = pPrMatch ? pPrMatch[1] : '';
 
@@ -143,11 +149,16 @@ export function parseDocxToHtml(arrayBuffer: ArrayBuffer): string | null {
       const styleDef = stylesMap[pStyleId] || {};
 
       const jcMatch = pPrContent.match(/<w:jc\b[^>]*w:val="([^"]+)"/);
-      const align = jcMatch ? (jcMatch[1] === 'both' ? 'justify' : jcMatch[1]) : (styleDef.align || '');
+      const align = jcMatch ? (jcMatch[1] === 'both' ? 'justify' : jcMatch[1]) : (styleDef.align || defaultAlign);
 
       const pStyles: string[] = [];
       if (align) pStyles.push(`text-align: ${align};`);
       if (styleDef.color) pStyles.push(`color: ${styleDef.color};`);
+
+      // Giãn dòng sát hơn nếu có chỉ thị w:line="240"
+      if (pPrContent.includes('w:line="240"')) {
+        pStyles.push('line-height: 1.25;');
+      }
 
       const innerHtml = parseRuns(pXml);
       const styleAttr = pStyles.length > 0 ? ` style="${pStyles.join(' ')}"` : '';
@@ -175,10 +186,11 @@ export function parseDocxToHtml(arrayBuffer: ArrayBuffer): string | null {
       const totalGridWidth = gridCols.reduce((a, b) => a + b, 0);
 
       const trMatches = tblXml.match(/<w:tr\b[\s\S]*?<\/w:tr>/g) || [];
-      let tableHtml = '<table style="width: 100%; border-collapse: collapse; margin: 12px 0; border: 1px solid #000;"><tbody>';
+      let tableHtml = '<table style="width: 100%; border-collapse: collapse; margin: 12px 0; border: 1.5px solid #000;"><tbody>';
 
       for (let rIdx = 0; rIdx < trMatches.length; rIdx++) {
         const tr = trMatches[rIdx];
+        const isHeaderRow = rIdx === 0;
         tableHtml += '<tr>';
         const tcMatches = tr.match(/<w:tc\b[\s\S]*?<\/w:tc>/g) || [];
 
@@ -187,10 +199,18 @@ export function parseDocxToHtml(arrayBuffer: ArrayBuffer): string | null {
           const tcPrMatch = tc.match(/<w:tcPr>([\s\S]*?)<\/w:tcPr>/);
           const tcPrContent = tcPrMatch ? tcPrMatch[1] : '';
 
+          // Căn dọc ô
+          const vAlignMatch = tcPrContent.match(/<w:vAlign\b[^>]*w:val="([^"]+)"/);
+          const vAlign = vAlignMatch ? (vAlignMatch[1] === 'center' ? 'middle' : vAlignMatch[1]) : 'middle';
+
+          // Căn lề ngang ô: Cột 0 (STT) hoặc dòng Tiêu đề mặc định căn giữa
+          const isCenterCol = cIdx === 0 || isHeaderRow;
+          const cellDefaultAlign = isCenterCol ? 'center' : 'left';
+
           const tcStyles: string[] = [
             'border: 1px solid #000;',
-            'padding: 6px 10px;',
-            'vertical-align: top;',
+            'padding: 5px 8px;',
+            `vertical-align: ${vAlign};`,
             'min-height: 24px;'
           ];
 
@@ -207,11 +227,23 @@ export function parseDocxToHtml(arrayBuffer: ArrayBuffer): string | null {
           const gridSpanMatch = tcPrContent.match(/<w:gridSpan\b[^>]*w:val="(\d+)"/);
           const colSpanAttr = gridSpanMatch ? ` colspan="${gridSpanMatch[1]}"` : '';
 
+          // Lọc bỏ đoạn văn rỗng cuối ô nếu ô đã có nội dung hợp lệ
           const pInside = tc.match(/<w:p\b[\s\S]*?<\/w:p>/g) || [];
-          let cellBody = '';
-          if (pInside.length > 0) {
-            cellBody = pInside.map(p => parseParagraph(p)).join('');
+          const pClean = pInside.map(p => ({
+            xml: p,
+            text: p.replace(/<[^>]+>/g, '').trim(),
+            hasDrawing: p.includes('<w:drawing') || p.includes('<w:pict')
+          }));
+
+          const hasContent = pClean.some(p => p.text.length > 0 || p.hasDrawing);
+          let validPs = pClean;
+          if (hasContent) {
+            while (validPs.length > 1 && validPs[validPs.length - 1].text.length === 0 && !validPs[validPs.length - 1].hasDrawing) {
+              validPs.pop();
+            }
           }
+
+          let cellBody = validPs.map(p => parseParagraph(p.xml, true, cellDefaultAlign)).join('');
           if (!cellBody.trim() || cellBody === '<p>&nbsp;</p>') {
             cellBody = '<p>&nbsp;</p>';
           }
@@ -609,17 +641,13 @@ export function printIsolatedDocument(
           width: 100%;
           border-collapse: collapse;
           margin: 12px 0;
-          border: 1px solid #000000;
         }
         table td, table th {
-          border: 1px solid #000000;
-          padding: 6px 10px;
-          vertical-align: top;
           min-height: 24px;
         }
-        table th {
-          background-color: #f8fafc;
-          font-weight: bold;
+        .word-tab {
+          display: inline-block;
+          min-width: 3.5rem;
         }
         p {
           margin-top: 0;

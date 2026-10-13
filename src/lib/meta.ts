@@ -42,7 +42,7 @@ export const APP_META: AppMeta = {
   shortName: "Merge Word",
   description: "Chỉnh sửa và trộn thư",
   appCode: "NAMNSMERGE",
-  version: "1.0.4",
+  version: "1.0.5",
   date: "2026-10-13",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
@@ -50,6 +50,20 @@ export const APP_META: AppMeta = {
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.5",
+      date: "2026-10-13",
+      changes: [
+        "Mặc định chuyển sang Chế độ Soạn thảo (Edit mode) ngay khi import hoặc chuyển đổi văn bản.",
+        "Bảo toàn hoàn hảo khoảng cách nhiều dấu cách liên tiếp và khoảng cách Tab giữa các đoạn văn bản (Họ tên, Giới tính, Ngày sinh, SĐT... không bị dính chữ).",
+        "Chuẩn hóa hiển thị bảng biểu OpenXML: Tự động căn giữa cột STT (cột 0) và dòng tiêu đề, làm sạch các đoạn văn rỗng cuối ô loại bỏ khoảng cách dọc thừa, căn dọc giữa tự nhiên.",
+        "Bộ công cụ WYSIWYG & Table Suite toàn diện: Thêm/xóa dòng trên/dưới, thêm/xóa cột trái/phải, căn lề ô (trái/giữa/phải), căn dọc ô (đỉnh/giữa/đáy), màu nền ô, đường viền bảng (nét liền/bỏ viền), tạo bảng tùy biến kích thước.",
+        "Hỗ trợ phím Tab trực tiếp: Nhấn phím Tab trong trình soạn thảo để nhảy thụt dòng thay vì mất tiêu điểm.",
+        "Tích hợp chèn ký tự đặc biệt & ô kiểm: Dấu tích (✓, ✔), ô vuông kiểm tra (☐, ☑), dấu sao, mũi tên, bullet.",
+        "Kho lưu trữ mẫu văn bản & Sao lưu/Phục hồi (.JSON): Lưu mẫu vào LocalStorage trình duyệt, tải file sao lưu (.JSON) về máy tính cá nhân và khôi phục nhanh chóng cho các lần sau.",
+        "Tinh chỉnh CSS in ấn & xuất PDF: Giữ nguyên khoảng cách Tab (.word-tab) và không ép viền lên bảng bố cục không viền."
+      ]
+    },
     {
       version: "1.0.4",
       date: "2026-10-13",

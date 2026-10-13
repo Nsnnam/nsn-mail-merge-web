@@ -10,6 +10,8 @@ import {
   Italic,
   Underline,
   Strikethrough,
+  Subscript as SubscriptIcon,
+  Superscript as SuperscriptIcon,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -28,7 +30,15 @@ import {
   Palette,
   Highlighter,
   Files,
-  Sparkles
+  Sparkles,
+  Bookmark,
+  Plus,
+  Trash2,
+  Split,
+  Square,
+  CheckSquare,
+  Columns,
+  Rows
 } from 'lucide-react';
 import { DocumentSettings } from '../types';
 import { VIETNAMESE_FONTS } from '../lib/fonts';
@@ -61,7 +71,14 @@ interface DocumentEditorPreviewProps {
   hasTemplate: boolean;
   hasExcel: boolean;
   theme?: ThemeGradient;
+  onOpenTemplateManager?: () => void;
 }
+
+const SPECIAL_SYMBOLS = [
+  '✓', '✔', '✕', '✖', '☐', '☑', '☒', '★', '☆',
+  '•', '●', '○', '→', '←', '↑', '↓', '↔', '±',
+  '≤', '≥', '≠', '≈', '°', 'µ', '§', '©', '®', '™'
+];
 
 export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEditorPreviewProps>(({
   templateHtml,
@@ -84,7 +101,8 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
   onExportZipAll,
   hasTemplate,
   hasExcel,
-  theme
+  theme,
+  onOpenTemplateManager
 }, ref) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
@@ -92,6 +110,12 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
 
   const [textColor, setTextColor] = useState('#000000');
   const [highlightColor, setHighlightColor] = useState('#ffff00');
+  const [cellBgColor, setCellBgColor] = useState('#f1f5f9');
+  const [isTableMenuOpen, setIsTableMenuOpen] = useState(false);
+  const [isSymbolsOpen, setIsSymbolsOpen] = useState(false);
+  const [isCustomTableModalOpen, setIsCustomTableModalOpen] = useState(false);
+  const [customRows, setCustomRows] = useState(4);
+  const [customCols, setCustomCols] = useState(4);
 
   // Lưu lại vị trí con trỏ / vùng bôi đen (selection)
   const saveSelection = () => {
@@ -224,7 +248,6 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     if (!editorRef.current.contains(range.commonAncestorContainer)) return;
 
     if (range.collapsed) {
-      // Nếu không bôi đen, dùng execCommand tương thích
       if (property === 'color') document.execCommand('foreColor', false, value);
       if (property === 'backgroundColor') document.execCommand('hiliteColor', false, value);
       return;
@@ -247,14 +270,59 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     }
   };
 
-  // Chèn bảng biểu
+  // Chèn khoảng cách Tab (Tab spacer)
+  const insertTabSpacer = () => {
+    const tabHtml = '<span class="word-tab" style="display:inline-block; min-width: 3.5rem;">&emsp;&emsp;</span>';
+    document.execCommand('insertHTML', false, tabHtml);
+    if (editorRef.current && !isPreviewMode) {
+      saveSelection();
+      onUpdateTemplateHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  // Bắt phím Tab trong editor để không bị nhảy focus ra ngoài trang web
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      insertTabSpacer();
+    }
+  };
+
+  // Chèn ký tự đặc biệt
+  const insertSymbol = (sym: string) => {
+    document.execCommand('insertText', false, sym);
+    if (editorRef.current && !isPreviewMode) {
+      saveSelection();
+      onUpdateTemplateHtml(editorRef.current.innerHTML);
+    }
+    setIsSymbolsOpen(false);
+  };
+
+  // === BỘ CÔNG CỤ BẢNG BIỂU CHUYÊN NGHIỆP (TABLE SUITE) ===
+  const getClosestCellAndTable = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !editorRef.current) return null;
+    let node: Node | null = sel.anchorNode;
+    if (!node) return null;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+    const el = node as HTMLElement;
+    if (!editorRef.current.contains(el)) return null;
+    const cell = el.closest('td, th') as HTMLTableCellElement | null;
+    const row = cell?.closest('tr') as HTMLTableRowElement | null;
+    const table = row?.closest('table') as HTMLTableElement | null;
+    if (!cell || !row || !table) return null;
+    return { cell, row, table };
+  };
+
   const insertTable = (rows: number, cols: number) => {
-    let tableHtml = '<table style="width: 100%; border-collapse: collapse; margin: 14px 0; border: 1px solid #94a3b8;"><tbody>';
+    let tableHtml = '<table style="width: 100%; border-collapse: collapse; margin: 12px 0; border: 1.5px solid #000;"><tbody>';
     for (let r = 0; r < rows; r++) {
       tableHtml += '<tr>';
       for (let c = 0; c < cols; c++) {
         const isHeader = r === 0;
-        tableHtml += `<td style="border: 1px solid #cbd5e1; padding: 6px 10px; min-width: 60px; font-weight: ${isHeader ? 'bold' : 'normal'}; background: ${isHeader ? '#f8fafc' : '#ffffff'};">${isHeader ? `Cột ${c + 1}` : 'Nội dung'}</td>`;
+        const isSTT = c === 0;
+        const align = (isHeader || isSTT) ? 'center' : 'left';
+        tableHtml += `<td style="border: 1px solid #000; padding: 5px 8px; vertical-align: middle; text-align: ${align}; font-weight: ${isHeader ? 'bold' : 'normal'}; background: ${isHeader ? '#f8fafc' : '#ffffff'};">${isHeader ? (isSTT ? 'STT' : `Cột ${c + 1}`) : (isSTT ? `${r}` : '&nbsp;')}</td>`;
       }
       tableHtml += '</tr>';
     }
@@ -265,38 +333,218 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     }
   };
 
+  const handleInsertRowAbove = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần thêm hàng.');
+      return;
+    }
+    const { row, table } = found;
+    const colCount = row.cells.length;
+    const newRow = table.insertRow(row.rowIndex);
+    for (let i = 0; i < colCount; i++) {
+      const newCell = newRow.insertCell(i);
+      newCell.style.border = '1px solid #000';
+      newCell.style.padding = '5px 8px';
+      newCell.style.verticalAlign = 'middle';
+      newCell.innerHTML = '<p>&nbsp;</p>';
+    }
+    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+  };
+
+  const handleInsertRowBelow = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần thêm hàng.');
+      return;
+    }
+    const { row, table } = found;
+    const colCount = row.cells.length;
+    const newRow = table.insertRow(row.rowIndex + 1);
+    for (let i = 0; i < colCount; i++) {
+      const newCell = newRow.insertCell(i);
+      newCell.style.border = '1px solid #000';
+      newCell.style.padding = '5px 8px';
+      newCell.style.verticalAlign = 'middle';
+      newCell.innerHTML = '<p>&nbsp;</p>';
+    }
+    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+  };
+
+  const handleDeleteRow = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần xóa hàng.');
+      return;
+    }
+    const { row, table } = found;
+    if (table.rows.length <= 1) {
+      table.remove();
+    } else {
+      table.deleteRow(row.rowIndex);
+    }
+    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+  };
+
+  const handleInsertColLeft = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần thêm cột.');
+      return;
+    }
+    const { cell, table } = found;
+    const colIdx = cell.cellIndex;
+    Array.from(table.rows).forEach(r => {
+      const newCell = r.insertCell(colIdx);
+      newCell.style.border = '1px solid #000';
+      newCell.style.padding = '5px 8px';
+      newCell.style.verticalAlign = 'middle';
+      newCell.innerHTML = '<p>&nbsp;</p>';
+    });
+    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+  };
+
+  const handleInsertColRight = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần thêm cột.');
+      return;
+    }
+    const { cell, table } = found;
+    const colIdx = cell.cellIndex;
+    Array.from(table.rows).forEach(r => {
+      const newCell = r.insertCell(colIdx + 1);
+      newCell.style.border = '1px solid #000';
+      newCell.style.padding = '5px 8px';
+      newCell.style.verticalAlign = 'middle';
+      newCell.innerHTML = '<p>&nbsp;</p>';
+    });
+    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+  };
+
+  const handleDeleteCol = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần xóa cột.');
+      return;
+    }
+    const { cell, row, table } = found;
+    const colIdx = cell.cellIndex;
+    if (row.cells.length <= 1) {
+      table.remove();
+    } else {
+      Array.from(table.rows).forEach(r => {
+        if (r.cells[colIdx]) {
+          r.deleteCell(colIdx);
+        }
+      });
+    }
+    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+  };
+
+  const handleDeleteTable = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần xóa.');
+      return;
+    }
+    if (window.confirm('Bạn có chắc muốn xóa toàn bộ bảng này không?')) {
+      found.table.remove();
+      if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleAlignCell = (align: 'left' | 'center' | 'right' | 'justify') => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần căn lề.');
+      return;
+    }
+    found.cell.style.textAlign = align;
+    found.cell.querySelectorAll('p, div, span').forEach(el => {
+      (el as HTMLElement).style.textAlign = align;
+    });
+    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+  };
+
+  const handleValignCell = (valign: 'top' | 'middle' | 'bottom') => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần căn lề dọc.');
+      return;
+    }
+    found.cell.style.verticalAlign = valign;
+    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+  };
+
+  const handleCellBgColorChange = (color: string) => {
+    setCellBgColor(color);
+    const found = getClosestCellAndTable();
+    if (found) {
+      found.cell.style.backgroundColor = color;
+      if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleSetTableBorders = (type: 'solid' | 'dashed' | 'none') => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần định dạng viền.');
+      return;
+    }
+    const borderStyle = type === 'solid' ? '1px solid #000' : type === 'dashed' ? '1px dashed #666' : 'none';
+    found.table.style.border = type === 'solid' ? '1.5px solid #000' : type === 'dashed' ? '1.5px dashed #666' : 'none';
+    found.table.querySelectorAll('td, th').forEach(c => {
+      (c as HTMLElement).style.border = borderStyle;
+    });
+    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+  };
+
   const fontFamilyStyle = settings.preserveOriginalFormat ? 'inherit' : selectedFont.family;
   const fontSizeStyle = settings.preserveOriginalFormat ? 'inherit' : settings.fontSize;
   const lineHeightStyle = settings.preserveOriginalFormat ? 'inherit' : settings.lineHeight;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-      {/* Thanh điều khiển chính trên cùng */}
+      {/* THANH ĐIỀU KHIỂN CHÍNH TRÊN CÙNG */}
       <div className="bg-slate-50 border-b border-slate-200 p-2.5 sm:px-4 flex flex-wrap items-center justify-between gap-2.5">
-        {/* Nhóm 1: Chuyển đổi Chế độ */}
-        <div className="inline-flex rounded-lg border border-slate-300 p-0.5 bg-white shadow-2xs">
-          <button
-            onClick={() => setIsPreviewMode(false)}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all ${
-              !isPreviewMode
-                ? theme ? theme.primaryBtn : 'bg-blue-600 text-white shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>Chế độ Soạn thảo</span>
-          </button>
-          <button
-            onClick={() => setIsPreviewMode(true)}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all ${
-              isPreviewMode
-                ? theme ? theme.primaryBtn : 'bg-blue-600 text-white shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span>Xem trước Dữ liệu</span>
-          </button>
+        {/* Nhóm 1: Chuyển đổi Chế độ & Kho mẫu */}
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-lg border border-slate-300 p-0.5 bg-white shadow-2xs">
+            <button
+              onClick={() => setIsPreviewMode(false)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                !isPreviewMode
+                  ? theme ? theme.primaryBtn : 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Chế độ Soạn thảo</span>
+            </button>
+            <button
+              onClick={() => setIsPreviewMode(true)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                isPreviewMode
+                  ? theme ? theme.primaryBtn : 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Xem trước Dữ liệu</span>
+            </button>
+          </div>
+
+          {onOpenTemplateManager && (
+            <button
+              onClick={onOpenTemplateManager}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 text-xs font-semibold shadow-2xs transition-all"
+              title="Mở Kho lưu trữ mẫu văn bản và sao lưu / khôi phục JSON"
+            >
+              <Bookmark className="w-3.5 h-3.5 text-amber-500" />
+              <span>Kho mẫu &amp; Sao lưu</span>
+            </button>
+          )}
         </div>
 
         {/* Nhóm 2: Điều hướng bản ghi Excel */}
@@ -417,7 +665,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
         </div>
       </div>
 
-      {/* THANH CÔNG CỤ SOẠN THẢO MỞ RỘNG (CHUYÊN NGHIỆP KIỂU MICROSOFT WORD) */}
+      {/* THANH CÔNG CỤ SOẠN THẢO WYSIWYG TOÀN DIỆN KIỂU MICROSOFT WORD */}
       {!isPreviewMode && (
         <div className="bg-white border-b border-slate-200 p-2 sm:px-4 flex flex-wrap items-center gap-1 text-xs text-slate-700 shadow-2xs">
           {/* Lịch sử */}
@@ -459,6 +707,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             defaultValue=""
           >
             <option value="" disabled>Cỡ chữ...</option>
+            <option value="10pt">10 pt</option>
             <option value="11pt">11 pt</option>
             <option value="12pt">12 pt</option>
             <option value="13pt">13 pt (Chuẩn NĐ 30)</option>
@@ -467,6 +716,22 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             <option value="18pt">18 pt (Tiêu đề lớn)</option>
             <option value="20pt">20 pt</option>
             <option value="24pt">24 pt</option>
+          </select>
+
+          {/* Giãn dòng */}
+          <select
+            onChange={(e) => applyInlineStyle('line-height', e.target.value)}
+            className="px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
+            defaultValue=""
+            title="Độ giãn dòng"
+          >
+            <option value="" disabled>Giãn dòng...</option>
+            <option value="1.0">1.0 (Đơn)</option>
+            <option value="1.15">1.15</option>
+            <option value="1.25">1.25 (Gọn Word)</option>
+            <option value="1.4">1.4 (Chuẩn)</option>
+            <option value="1.5">1.5</option>
+            <option value="2.0">2.0 (Gấp đôi)</option>
           </select>
 
           <span className="w-px h-4 bg-slate-200 mx-1"></span>
@@ -503,6 +768,22 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             title="Gạch ngang chữ"
           >
             <Strikethrough className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => execFormat('subscript')}
+            onMouseDown={(e) => e.preventDefault()}
+            className="p-1.5 rounded hover:bg-slate-100 text-slate-800"
+            title="Chỉ số dưới (X₂)"
+          >
+            <SubscriptIcon className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => execFormat('superscript')}
+            onMouseDown={(e) => e.preventDefault()}
+            className="p-1.5 rounded hover:bg-slate-100 text-slate-800"
+            title="Chỉ số trên (X²)"
+          >
+            <SuperscriptIcon className="w-3.5 h-3.5" />
           </button>
 
           <span className="w-px h-4 bg-slate-200 mx-1"></span>
@@ -611,16 +892,268 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
 
           <span className="w-px h-4 bg-slate-200 mx-1"></span>
 
-          {/* Chèn bảng & Đường kẻ */}
+          {/* Khoảng cách Tab */}
           <button
-            onClick={() => insertTable(3, 3)}
+            onClick={insertTabSpacer}
             onMouseDown={(e) => e.preventDefault()}
-            className="p-1.5 rounded hover:bg-slate-100 text-slate-700 flex items-center gap-1"
-            title="Chèn bảng biểu 3x3"
+            className="px-2 py-1 rounded hover:bg-slate-100 text-slate-700 border border-slate-200 bg-slate-50 font-medium flex items-center gap-1"
+            title="Chèn khoảng cách Tab giữa các đoạn (phím Tab)"
           >
-            <TableIcon className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-medium hidden md:inline">Bảng</span>
+            <span className="font-mono font-bold text-[11px]">Tab ⇥</span>
           </button>
+
+          {/* Chèn Ký tự đặc biệt / Ô kiểm */}
+          <div className="relative">
+            <button
+              onClick={() => setIsSymbolsOpen(!isSymbolsOpen)}
+              onMouseDown={(e) => e.preventDefault()}
+              className="px-2 py-1 rounded hover:bg-slate-100 text-slate-700 border border-slate-200 bg-slate-50 font-medium flex items-center gap-1"
+              title="Chèn ký tự đặc biệt, dấu tích, ô vuông..."
+            >
+              <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
+              <span className="text-[11px]">Ký tự</span>
+            </button>
+
+            {isSymbolsOpen && (
+              <div className="absolute left-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-xl p-2 w-56 grid grid-cols-7 gap-1">
+                {SPECIAL_SYMBOLS.map(sym => (
+                  <button
+                    key={sym}
+                    onClick={() => insertSymbol(sym)}
+                    className="w-7 h-7 flex items-center justify-center text-sm rounded hover:bg-blue-50 hover:text-blue-600 border border-slate-100 transition-colors"
+                  >
+                    {sym}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <span className="w-px h-4 bg-slate-200 mx-1"></span>
+
+          {/* BỘ CÔNG CỤ BẢNG BIỂU (TABLE SUITE) */}
+          <div className="relative">
+            <button
+              onClick={() => setIsTableMenuOpen(!isTableMenuOpen)}
+              onMouseDown={(e) => e.preventDefault()}
+              className={`px-2 py-1 rounded border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs ${
+                isTableMenuOpen
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200'
+              }`}
+              title="Bộ công cụ cấu hình và sắp xếp nội dung bảng biểu đầy đủ"
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+              <span>Công cụ Bảng</span>
+            </button>
+
+            {isTableMenuOpen && (
+              <div className="absolute left-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-2xl p-3 w-80 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                    <TableIcon className="w-4 h-4 text-blue-600" /> Cấu hình &amp; Định dạng Bảng
+                  </span>
+                  <button
+                    onClick={() => setIsTableMenuOpen(false)}
+                    className="text-slate-400 hover:text-slate-600 text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* 1. Thêm bảng mới */}
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-600 block mb-1">Tạo bảng mới:</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => { insertTable(3, 3); setIsTableMenuOpen(false); }}
+                      className="px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded text-xs font-medium border border-slate-200"
+                    >
+                      Bảng 3x3
+                    </button>
+                    <button
+                      onClick={() => { insertTable(4, 5); setIsTableMenuOpen(false); }}
+                      className="px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded text-xs font-medium border border-slate-200"
+                    >
+                      Bảng 4x5
+                    </button>
+                    <button
+                      onClick={() => { setIsCustomTableModalOpen(true); setIsTableMenuOpen(false); }}
+                      className="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-xs font-semibold border border-blue-200 ml-auto"
+                    >
+                      Tùy chọn...
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Thao tác dòng (Row) */}
+                <div className="border-t border-slate-100 pt-2">
+                  <span className="text-[11px] font-semibold text-slate-600 block mb-1 flex items-center gap-1">
+                    <Rows className="w-3.5 h-3.5 text-slate-500" /> Thao tác dòng:
+                  </span>
+                  <div className="grid grid-cols-3 gap-1">
+                    <button
+                      onClick={handleInsertRowAbove}
+                      className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200"
+                      title="Thêm 1 dòng nằm ngay phía trên ô đang chọn"
+                    >
+                      + Dòng trên
+                    </button>
+                    <button
+                      onClick={handleInsertRowBelow}
+                      className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200"
+                      title="Thêm 1 dòng nằm ngay phía dưới ô đang chọn"
+                    >
+                      + Dòng dưới
+                    </button>
+                    <button
+                      onClick={handleDeleteRow}
+                      className="p-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded text-[11px] font-medium border border-rose-200"
+                      title="Xóa dòng đang chọn"
+                    >
+                      Xóa dòng
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Thao tác cột (Column) */}
+                <div className="border-t border-slate-100 pt-2">
+                  <span className="text-[11px] font-semibold text-slate-600 block mb-1 flex items-center gap-1">
+                    <Columns className="w-3.5 h-3.5 text-slate-500" /> Thao tác cột:
+                  </span>
+                  <div className="grid grid-cols-3 gap-1">
+                    <button
+                      onClick={handleInsertColLeft}
+                      className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200"
+                      title="Thêm 1 cột bên trái ô đang chọn"
+                    >
+                      + Cột trái
+                    </button>
+                    <button
+                      onClick={handleInsertColRight}
+                      className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200"
+                      title="Thêm 1 cột bên phải ô đang chọn"
+                    >
+                      + Cột phải
+                    </button>
+                    <button
+                      onClick={handleDeleteCol}
+                      className="p-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded text-[11px] font-medium border border-rose-200"
+                      title="Xóa cột đang chọn"
+                    >
+                      Xóa cột
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Căn lề nội dung trong ô */}
+                <div className="border-t border-slate-100 pt-2">
+                  <span className="text-[11px] font-semibold text-slate-600 block mb-1">Căn lề ô hiện tại:</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleAlignCell('left')}
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center"
+                      title="Canh trái ô"
+                    >
+                      Trái
+                    </button>
+                    <button
+                      onClick={() => handleAlignCell('center')}
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center font-bold"
+                      title="Canh giữa ô"
+                    >
+                      Giữa
+                    </button>
+                    <button
+                      onClick={() => handleAlignCell('right')}
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center"
+                      title="Canh phải ô"
+                    >
+                      Phải
+                    </button>
+                    <button
+                      onClick={() => handleAlignCell('justify')}
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center"
+                      title="Đều 2 bên"
+                    >
+                      Đều
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5. Căn lề dọc trong ô */}
+                <div className="border-t border-slate-100 pt-2">
+                  <span className="text-[11px] font-semibold text-slate-600 block mb-1">Căn lề dọc ô:</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleValignCell('top')}
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center"
+                      title="Căn đỉnh ô"
+                    >
+                      Đỉnh (Top)
+                    </button>
+                    <button
+                      onClick={() => handleValignCell('middle')}
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center font-bold"
+                      title="Căn giữa dọc"
+                    >
+                      Giữa (Middle)
+                    </button>
+                    <button
+                      onClick={() => handleValignCell('bottom')}
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center"
+                      title="Căn đáy ô"
+                    >
+                      Đáy (Bottom)
+                    </button>
+                  </div>
+                </div>
+
+                {/* 6. Màu nền ô & Viền bảng */}
+                <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-slate-600">Nền ô:</span>
+                    <input
+                      type="color"
+                      value={cellBgColor}
+                      onChange={(e) => handleCellBgColorChange(e.target.value)}
+                      className="w-5 h-5 rounded cursor-pointer border border-slate-200 p-0"
+                      title="Chọn màu nền ô đang chọn"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleSetTableBorders('solid')}
+                      className="px-2 py-0.5 bg-slate-50 hover:bg-slate-100 rounded text-[10px] font-semibold border border-slate-200"
+                      title="Viền nét liền chuẩn 1px"
+                    >
+                      Viền nét liền
+                    </button>
+                    <button
+                      onClick={() => handleSetTableBorders('none')}
+                      className="px-2 py-0.5 bg-slate-50 hover:bg-slate-100 rounded text-[10px] border border-slate-200"
+                      title="Ẩn đường viền bảng"
+                    >
+                      Bỏ viền
+                    </button>
+                  </div>
+                </div>
+
+                {/* 7. Xóa toàn bộ bảng */}
+                <div className="border-t border-slate-100 pt-2 text-right">
+                  <button
+                    onClick={handleDeleteTable}
+                    className="px-3 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded text-xs font-semibold border border-rose-200 inline-flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Xóa toàn bộ bảng này</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => execFormat('insertHorizontalRule')}
             onMouseDown={(e) => e.preventDefault()}
@@ -628,7 +1161,6 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             title="Chèn đường kẻ ngang phân cách"
           >
             <Minus className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-medium hidden md:inline">Kẻ ngang</span>
           </button>
           <button
             onClick={() => execFormat('removeFormat')}
@@ -638,6 +1170,61 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
           >
             <RemoveFormatting className="w-3.5 h-3.5" />
           </button>
+        </div>
+      )}
+
+      {/* MODAL TẠO BẢNG TÙY BIẾN KÍCH THƯỚC */}
+      {isCustomTableModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-5 max-w-sm w-full space-y-4">
+            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <TableIcon className="w-4 h-4 text-blue-600" />
+              <span>Chèn bảng tùy biến kích thước</span>
+            </h4>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Số hàng (Rows):</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={customRows}
+                  onChange={(e) => setCustomRows(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Số cột (Cols):</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={customCols}
+                  onChange={(e) => setCustomCols(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setIsCustomTableModalOpen(false)}
+                className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  insertTable(customRows, customCols);
+                  setIsCustomTableModalOpen(false);
+                }}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-lg shadow-2xs transition-all ${
+                  theme ? theme.primaryBtn : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                Tạo bảng ({customRows}x{customCols})
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -663,7 +1250,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             </span>
           ) : (
             <span className="text-blue-700 font-medium flex items-center gap-1">
-              <Edit3 className="w-3 h-3 text-blue-600" /> Chế độ soạn thảo (Bôi đen/Click văn bản để định dạng hoặc chèn biến)
+              <Edit3 className="w-3 h-3 text-blue-600" /> Chế độ soạn thảo (Bôi đen/Click văn bản để định dạng hoặc chèn biến, nhấn phím Tab để nhảy thụt dòng)
             </span>
           )}
         </div>
@@ -686,6 +1273,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             ref={editorRef}
             contentEditable={!isPreviewMode}
             onInput={handleInput}
+            onKeyDown={handleKeyDown}
             onMouseUp={saveSelection}
             onKeyUp={saveSelection}
             onFocus={saveSelection}

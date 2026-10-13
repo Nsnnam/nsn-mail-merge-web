@@ -5,12 +5,14 @@ import { TopFormatBar } from './components/TopFormatBar';
 import { ExcelColumnsSidebar } from './components/ExcelColumnsSidebar';
 import { DocumentEditorPreview, DocumentEditorHandle } from './components/DocumentEditorPreview';
 import { ThemeSettingsModal } from './components/ThemeSettingsModal';
+import { TemplateManagerModal } from './components/TemplateManagerModal';
 import { GuideTab } from './components/GuideTab';
 import { ChangelogTab } from './components/ChangelogTab';
 import { AuthorTab } from './components/AuthorTab';
 import { CoffeeTab } from './components/CoffeeTab';
 import { Footer } from './components/Footer';
 import { DocumentSettings, ExcelSheetData, UploadedWordItem, UploadedExcelItem } from './types';
+import { SavedTemplateItem } from './lib/templateStorage';
 import {
   DEFAULT_SAMPLE_TEMPLATE_HTML,
   getDefaultSampleDocxBuffer,
@@ -42,6 +44,7 @@ export const App: React.FC = () => {
   const [activeThemeId, setActiveThemeId] = useState<string>(() => getSavedTheme());
   const [activeFontId, setActiveFontId] = useState<string>(() => getSavedUiFont());
   const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
 
   const currentTheme = THEME_GRADIENTS.find(t => t.id === activeThemeId) || THEME_GRADIENTS[0];
   const currentUiFont = UI_FONTS.find(f => f.id === activeFontId) || UI_FONTS[0];
@@ -79,9 +82,9 @@ export const App: React.FC = () => {
   const [activeSheet, setActiveSheet] = useState<string>('');
   const [excelData, setExcelData] = useState<ExcelSheetData>({ sheetName: '', headers: [], rows: [], totalRows: 0 });
 
-  // Trạng thái Duyệt bản ghi
+  // Trạng thái Duyệt bản ghi: Mặc định luôn là Chế độ Soạn thảo (Edit mode) khi import hoặc khởi tạo
   const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [isPreviewMode, setIsPreviewMode] = useState<boolean>(true);
+  const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
 
   // Cấu hình Định dạng: Mặc định giữ nguyên định dạng ban đầu của file gốc
   const [settings, setSettings] = useState<DocumentSettings>({
@@ -136,6 +139,7 @@ export const App: React.FC = () => {
         setWordFileName(first.name);
         setTemplateHtml(first.html);
         setDetectedWordTags(first.tags);
+        setIsPreviewMode(false); // Mặc định chế độ soạn thảo khi import
       }
 
       // Tự động thu gọn bảng nạp nếu đã có cả Excel và Word
@@ -176,7 +180,7 @@ export const App: React.FC = () => {
         setActiveSheet(first.activeSheet);
         setExcelData(first.data);
         setCurrentIndex(0);
-        setIsPreviewMode(true);
+        setIsPreviewMode(false); // Mặc định chế độ soạn thảo khi import
       }
 
       // Tự động thu gọn bảng nạp nếu đã có cả Word và Excel
@@ -197,6 +201,18 @@ export const App: React.FC = () => {
     setWordFileName(item.name);
     setTemplateHtml(item.html);
     setDetectedWordTags(item.tags);
+    setIsPreviewMode(false);
+  };
+
+  // Chọn mẫu từ Kho lưu trữ mẫu văn bản
+  const handleSelectTemplateFromStorage = (tpl: SavedTemplateItem) => {
+    setTemplateHtml(tpl.html);
+    setDetectedWordTags(tpl.tags);
+    setWordFileName(tpl.name + '.docx');
+    setIsPreviewMode(false);
+    if (excelFiles.length > 0 || excelFileName) {
+      setIsImportCollapsed(true);
+    }
   };
 
   // Xóa file Word (hỗ trợ xóa hàng loạt)
@@ -313,7 +329,7 @@ export const App: React.FC = () => {
     setActiveSheet('DanhSachMoi');
     setExcelData(sampleExcel);
     setCurrentIndex(0);
-    setIsPreviewMode(true);
+    setIsPreviewMode(false);
     setIsImportCollapsed(true);
   };
 
@@ -497,6 +513,17 @@ export const App: React.FC = () => {
           onSelectFont={handleSelectUiFont}
         />
 
+        {/* Modal Kho mẫu & Sao lưu / Phục hồi JSON */}
+        <TemplateManagerModal
+          isOpen={isTemplateModalOpen}
+          onClose={() => setIsTemplateModalOpen(false)}
+          currentTemplateHtml={templateHtml}
+          currentTags={detectedWordTags}
+          currentDocName={wordFileName}
+          onSelectTemplate={handleSelectTemplateFromStorage}
+          theme={currentTheme}
+        />
+
         {/* Tab Nội dung */}
         {activeTab === 'merge' && (
           <div className="space-y-3.5">
@@ -560,6 +587,7 @@ export const App: React.FC = () => {
                   hasTemplate={Boolean(templateHtml)}
                   hasExcel={excelData.rows.length > 0}
                   theme={currentTheme}
+                  onOpenTemplateManager={() => setIsTemplateModalOpen(true)}
                 />
               </div>
 
