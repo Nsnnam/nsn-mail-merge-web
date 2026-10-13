@@ -24,6 +24,7 @@ export interface CoffeeConfig {
 export interface AppMeta {
   name: string;
   shortName: string;
+  description: string;
   appCode: string;
   version: string;
   date: string;
@@ -37,10 +38,11 @@ export interface AppMeta {
 }
 
 export const APP_META: AppMeta = {
-  name: "NSN Word Mail Merge Web Pro",
-  shortName: "Mail Merge Web",
-  appCode: "MAILMERGE",
-  version: "1.0.2",
+  name: "Namns Merge Word",
+  shortName: "Merge Word",
+  description: "Chỉnh sửa và trộn thư",
+  appCode: "NAMNSMERGE",
+  version: "1.0.3",
   date: "2026-10-13",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
@@ -48,6 +50,17 @@ export const APP_META: AppMeta = {
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.3",
+      date: "2026-10-13",
+      changes: [
+        "Đổi tên ứng dụng ngắn gọn thành 'Namns Merge Word', mô tả 'Chỉnh sửa và trộn thư'.",
+        "Thiết kế lại Logo vector & Icon web nhận diện thương hiệu chuyên nghiệp dạng đa lớp văn bản hiện đại.",
+        "Tối ưu hiệu suất làm việc: Tự động thu gọn bảng nạp tệp sau khi đã nạp dữ liệu, hiển thị thanh tóm tắt gọn gàng và hỗ trợ mở rộng nhanh.",
+        "Thêm cài đặt giao diện phong phú: 6 chủ đề Gradient cao cấp (Ocean, Sunset, Emerald, Midnight, Amber, Aurora) cùng bộ font giao diện tiếng Việt (Be Vietnam Pro, Inter, Roboto, Montserrat, Nunito, Open Sans).",
+        "Lưu cấu hình giao diện bền vững vào localStorage (chuẩn NSN App Standard)."
+      ]
+    },
     {
       version: "1.0.2",
       date: "2026-10-13",

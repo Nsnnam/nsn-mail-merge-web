@@ -14,7 +14,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenTab }) => {
           <strong className="text-slate-800">{APP_META.name}</strong>
           {' · '}v<span>{APP_META.version}</span>
           {' · '}<span>{APP_META.author}</span>
-          <span className="hidden md:inline"> · Múi giờ {APP_META.timezone}</span>
+          <span className="hidden md:inline"> · {APP_META.description} · Múi giờ {APP_META.timezone}</span>
         </div>
 
         <div className="flex items-center space-x-4">

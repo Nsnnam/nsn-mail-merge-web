@@ -4,6 +4,7 @@ import { FileImportSection } from './components/FileImportSection';
 import { TopFormatBar } from './components/TopFormatBar';
 import { ExcelColumnsSidebar } from './components/ExcelColumnsSidebar';
 import { DocumentEditorPreview, DocumentEditorHandle } from './components/DocumentEditorPreview';
+import { ThemeSettingsModal } from './components/ThemeSettingsModal';
 import { GuideTab } from './components/GuideTab';
 import { ChangelogTab } from './components/ChangelogTab';
 import { AuthorTab } from './components/AuthorTab';
@@ -21,6 +22,14 @@ import {
   printIsolatedDocument
 } from './lib/docxHelper';
 import { readExcelFile, extractSheetData, getSampleExcelData } from './lib/excelHelper';
+import {
+  THEME_GRADIENTS,
+  UI_FONTS,
+  getSavedTheme,
+  saveTheme,
+  getSavedUiFont,
+  saveUiFont
+} from './lib/theme';
 import { saveAs } from 'file-saver';
 import { VIETNAMESE_FONTS } from './lib/fonts';
 import { Loader2 } from 'lucide-react';
@@ -29,8 +38,29 @@ import * as XLSX from 'xlsx';
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'merge' | 'guide' | 'changelog' | 'author' | 'coffee'>('merge');
 
+  // Cài đặt Giao diện Gradient & Font chữ Web
+  const [activeThemeId, setActiveThemeId] = useState<string>(() => getSavedTheme());
+  const [activeFontId, setActiveFontId] = useState<string>(() => getSavedUiFont());
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
+
+  const currentTheme = THEME_GRADIENTS.find(t => t.id === activeThemeId) || THEME_GRADIENTS[0];
+  const currentUiFont = UI_FONTS.find(f => f.id === activeFontId) || UI_FONTS[0];
+
+  const handleSelectTheme = (themeId: string) => {
+    setActiveThemeId(themeId);
+    saveTheme(themeId);
+  };
+
+  const handleSelectUiFont = (fontId: string) => {
+    setActiveFontId(fontId);
+    saveUiFont(fontId);
+  };
+
   // Ref kết nối tới DocumentEditorPreview
   const editorRef = useRef<DocumentEditorHandle>(null);
+
+  // Trạng thái thu gọn bảng nạp tệp sau khi đã import
+  const [isImportCollapsed, setIsImportCollapsed] = useState<boolean>(true);
 
   // Trạng thái Word template - Nạp sẵn binary mẫu .docx để đảm bảo 100% giữ định dạng
   const [wordFileName, setWordFileName] = useState<string | null>('Mau_Giay_Moi_Hoi_Nghi_2026.docx');
@@ -49,7 +79,7 @@ export const App: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(true);
 
-  // Cấu hình Định dạng văn bản
+  // Cấu hình Định dạng văn bản in
   const [settings, setSettings] = useState<DocumentSettings>({
     fontId: 'be-vietnam',
     fontSize: '13pt',
@@ -72,7 +102,7 @@ export const App: React.FC = () => {
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
 
-  // Nạp file Word
+  // Nạp file Word - Tự động thu gọn bảng nạp sau khi hoàn tất
   const handleWordUpload = async (file: File) => {
     try {
       const buffer = await file.arrayBuffer();
@@ -81,12 +111,13 @@ export const App: React.FC = () => {
       const { html, tags } = await extractHtmlFromDocx(buffer);
       setTemplateHtml(html);
       setDetectedWordTags(tags);
+      if (excelFileName) setIsImportCollapsed(true);
     } catch (err: any) {
       alert(err.message || 'Lỗi khi đọc file Word.');
     }
   };
 
-  // Nạp file Excel
+  // Nạp file Excel - Tự động thu gọn bảng nạp sau khi hoàn tất
   const handleExcelUpload = async (file: File) => {
     try {
       const parsed = await readExcelFile(file);
@@ -97,6 +128,7 @@ export const App: React.FC = () => {
       setExcelFileName(file.name);
       setCurrentIndex(0);
       setIsPreviewMode(true);
+      if (wordFileName) setIsImportCollapsed(true);
     } catch (err: any) {
       alert(err.message || 'Lỗi khi đọc file Excel.');
     }
@@ -111,7 +143,7 @@ export const App: React.FC = () => {
     setCurrentIndex(0);
   };
 
-  // Dùng thử mẫu có sẵn (Luôn nạp cả binary .docx mẫu chuẩn)
+  // Dùng thử mẫu có sẵn - Tự động thu gọn bảng nạp
   const handleLoadSample = () => {
     const sample = getSampleExcelData();
     const sampleBuffer = getDefaultSampleDocxBuffer();
@@ -124,6 +156,7 @@ export const App: React.FC = () => {
     setExcelData(sample);
     setCurrentIndex(0);
     setIsPreviewMode(true);
+    setIsImportCollapsed(true);
   };
 
   // Xóa danh sách import (Clear Import Standard)
@@ -139,6 +172,7 @@ export const App: React.FC = () => {
       setCurrentIndex(0);
       setTemplateHtml(DEFAULT_SAMPLE_TEMPLATE_HTML);
       setIsPreviewMode(false);
+      setIsImportCollapsed(false);
     }
   };
 
@@ -147,7 +181,7 @@ export const App: React.FC = () => {
     editorRef.current?.insertTag(tag);
   };
 
-  // In bản ghi hiện tại qua iframe cách ly (CHỈ in nội dung văn bản, không in giao diện web)
+  // In bản ghi hiện tại qua iframe cách ly
   const handlePrintCurrent = () => {
     const mergedHtml = renderMergedHtml(templateHtml, currentRow, true);
     const font = settings.preserveOriginalFormat ? 'Times New Roman, serif' : selectedFont.family;
@@ -157,7 +191,7 @@ export const App: React.FC = () => {
     printIsolatedDocument([mergedHtml], font, size, lineH);
   };
 
-  // In toàn bộ bản ghi qua iframe cách ly (Mỗi bản ghi 1 trang chuẩn A4)
+  // In toàn bộ bản ghi qua iframe cách ly
   const handlePrintAll = () => {
     if (excelData.rows.length === 0) {
       alert('Không có dữ liệu bản ghi để in.');
@@ -205,7 +239,7 @@ export const App: React.FC = () => {
     setTimeout(() => {
       try {
         const outBlob = generateMergedSingleDocx(buffer, excelData.rows);
-        const name = `Tron_Thu_Gop_Tat_Ca_${excelData.rows.length}_Trang.docx`;
+        const name = `Namns_Merge_Word_Gop_${excelData.rows.length}_Trang.docx`;
         saveAs(outBlob, name);
       } catch (err: any) {
         alert(err.message || 'Lỗi khi xuất file Word gộp.');
@@ -236,7 +270,7 @@ export const App: React.FC = () => {
           setExportMessage(`Đang xử lý bản ghi ${curr} / ${total}...`);
         }
       );
-      saveAs(zipBlob, `Tron_Thu_Hang_Loat_${excelData.rows.length}_VanBan.zip`);
+      saveAs(zipBlob, `Namns_Merge_Word_${excelData.rows.length}_VanBan.zip`);
     } catch (err: any) {
       alert(err.message || 'Lỗi xuất file ZIP.');
     } finally {
@@ -250,18 +284,23 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-be-vietnam">
-      {/* Header */}
+    <div
+      className="min-h-screen flex flex-col bg-slate-50 text-slate-900 transition-colors"
+      style={{ fontFamily: currentUiFont.cssFamily }}
+    >
+      {/* Header với Theme Gradient động */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         wordLoaded={Boolean(wordFileName)}
         excelLoaded={Boolean(excelFileName && excelData.rows.length > 0)}
         totalRecords={excelData.rows.length}
+        theme={currentTheme}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-4">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 space-y-3.5">
         {/* Loading overlay khi xuất ZIP hoặc gộp DOCX */}
         {isExporting && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50">
@@ -275,10 +314,20 @@ export const App: React.FC = () => {
           </div>
         )}
 
+        {/* Modal Cài đặt Giao diện Gradient & Font chữ */}
+        <ThemeSettingsModal
+          isOpen={isThemeModalOpen}
+          onClose={() => setIsThemeModalOpen(false)}
+          activeThemeId={activeThemeId}
+          onSelectTheme={handleSelectTheme}
+          activeFontId={activeFontId}
+          onSelectFont={handleSelectUiFont}
+        />
+
         {/* Tab Nội dung */}
         {activeTab === 'merge' && (
-          <div className="space-y-4">
-            {/* Bước 1: Nạp file Word & Excel */}
+          <div className="space-y-3.5">
+            {/* Bước 1: Nạp file Word & Excel (Tự động thu gọn sau khi đã nạp) */}
             <FileImportSection
               onWordUpload={handleWordUpload}
               onExcelUpload={handleExcelUpload}
@@ -288,6 +337,8 @@ export const App: React.FC = () => {
               excelFileName={excelFileName}
               totalRecords={excelData.rows.length}
               totalColumns={excelData.headers.length}
+              isCollapsed={isImportCollapsed}
+              onToggleCollapse={() => setIsImportCollapsed(!isImportCollapsed)}
             />
 
             {/* Bước 2: Thanh điều khiển Chọn Sheet & Cấu hình Font chữ */}
@@ -302,7 +353,7 @@ export const App: React.FC = () => {
             />
 
             {/* Bố cục 2 cột: Cột trái Word (cuộn độc lập) & Cột phải Cột Excel (cố định sticky) */}
-            <div className="flex flex-col lg:flex-row gap-5 items-start">
+            <div className="flex flex-col lg:flex-row gap-4.5 items-start">
               {/* Cột trái: Văn bản Word */}
               <div className="flex-1 w-full min-w-0">
                 <DocumentEditorPreview
