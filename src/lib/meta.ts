@@ -42,7 +42,7 @@ export const APP_META: AppMeta = {
   shortName: "Merge Word",
   description: "Chỉnh sửa và trộn thư",
   appCode: "NAMNSMERGE",
-  version: "1.0.3",
+  version: "1.0.4",
   date: "2026-10-13",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
@@ -50,6 +50,18 @@ export const APP_META: AppMeta = {
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.4",
+      date: "2026-10-13",
+      changes: [
+        "Sửa lỗi triệt để bảng biểu và màu sắc file Word: Tích hợp bộ phân tích OpenXML trực tiếp, bảo toàn 100% màu sắc (Heading blue, text color, highlight), cấu trúc TableGrid, viền bảng và độ rộng cột.",
+        "Hỗ trợ nhận diện và chuyển hóa tự động các trường trộn bản địa của Microsoft Word (MERGEFIELD) sang biến trộn {{Ten_Cot}}.",
+        "Mặc định kích hoạt chế độ 'Giữ nguyên định dạng ban đầu của file Word gốc' theo đúng yêu cầu.",
+        "Mở rộng chủ đề Gradient toàn diện: Áp dụng màu gradient lên thanh tiêu đề, nút bấm chính, viền phát sáng và hiệu ứng nền thay vì chỉ đổi màu icon.",
+        "Tối ưu quy trình nạp tệp: Mặc định hiển thị bảng nạp tệp ngay khi mở trang, chỉ tự động thu gọn sau khi nạp tệp.",
+        "Bổ sung tính năng nạp nhiều file cùng lúc (Multi-file upload) cho cả Word và Excel, kèm bộ quản lý tệp và xóa hàng loạt (Bulk Delete)."
+      ]
+    },
     {
       version: "1.0.3",
       date: "2026-10-13",

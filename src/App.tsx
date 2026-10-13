@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Header } from './components/Header';
 import { FileImportSection } from './components/FileImportSection';
 import { TopFormatBar } from './components/TopFormatBar';
@@ -10,7 +10,7 @@ import { ChangelogTab } from './components/ChangelogTab';
 import { AuthorTab } from './components/AuthorTab';
 import { CoffeeTab } from './components/CoffeeTab';
 import { Footer } from './components/Footer';
-import { DocumentSettings, ExcelSheetData } from './types';
+import { DocumentSettings, ExcelSheetData, UploadedWordItem, UploadedExcelItem } from './types';
 import {
   DEFAULT_SAMPLE_TEMPLATE_HTML,
   getDefaultSampleDocxBuffer,
@@ -59,33 +59,37 @@ export const App: React.FC = () => {
   // Ref kết nối tới DocumentEditorPreview
   const editorRef = useRef<DocumentEditorHandle>(null);
 
-  // Trạng thái thu gọn bảng nạp tệp sau khi đã import
-  const [isImportCollapsed, setIsImportCollapsed] = useState<boolean>(true);
+  // Trạng thái thu gọn bảng nạp tệp: Ban đầu KHÔNG thu gọn (hiển thị luôn phần import, nạp tệp vào mới ẩn đi)
+  const [isImportCollapsed, setIsImportCollapsed] = useState<boolean>(false);
 
-  // Trạng thái Word template - Nạp sẵn binary mẫu .docx để đảm bảo 100% giữ định dạng
-  const [wordFileName, setWordFileName] = useState<string | null>('Mau_Giay_Moi_Hoi_Nghi_2026.docx');
-  const [wordBuffer, setWordBuffer] = useState<ArrayBuffer | null>(() => getDefaultSampleDocxBuffer());
-  const [templateHtml, setTemplateHtml] = useState<string>(DEFAULT_SAMPLE_TEMPLATE_HTML);
+  // Danh sách tệp Word mẫu (Hỗ trợ nạp nhiều file cùng lúc & xóa hàng loạt)
+  const [wordFiles, setWordFiles] = useState<UploadedWordItem[]>([]);
+  const [activeWordId, setActiveWordId] = useState<string | null>(null);
+  const [wordFileName, setWordFileName] = useState<string | null>(null);
+  const [wordBuffer, setWordBuffer] = useState<ArrayBuffer | null>(null);
+  const [templateHtml, setTemplateHtml] = useState<string>('');
   const [detectedWordTags, setDetectedWordTags] = useState<string[]>([]);
 
-  // Trạng thái Excel
-  const [excelFileName, setExcelFileName] = useState<string | null>('DanhSach_DaiBieu_2026.xlsx');
+  // Danh sách tệp Excel (Hỗ trợ nạp nhiều file cùng lúc & xóa hàng loạt)
+  const [excelFiles, setExcelFiles] = useState<UploadedExcelItem[]>([]);
+  const [activeExcelId, setActiveExcelId] = useState<string | null>(null);
+  const [excelFileName, setExcelFileName] = useState<string | null>(null);
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
-  const [sheetNames, setSheetNames] = useState<string[]>(['DanhSachMoi']);
-  const [activeSheet, setActiveSheet] = useState<string>('DanhSachMoi');
-  const [excelData, setExcelData] = useState<ExcelSheetData>(getSampleExcelData());
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [activeSheet, setActiveSheet] = useState<string>('');
+  const [excelData, setExcelData] = useState<ExcelSheetData>({ sheetName: '', headers: [], rows: [], totalRows: 0 });
 
   // Trạng thái Duyệt bản ghi
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(true);
 
-  // Cấu hình Định dạng văn bản in
+  // Cấu hình Định dạng: Mặc định giữ nguyên định dạng ban đầu của file gốc
   const [settings, setSettings] = useState<DocumentSettings>({
     fontId: 'be-vietnam',
     fontSize: '13pt',
     lineHeight: '1.4',
     textAlign: 'justify',
-    preserveOriginalFormat: false,
+    preserveOriginalFormat: true, // Mặc định phải theo đúng dữ liệu định dạng gốc của file
     pageMargin: 'normal'
   });
 
@@ -102,36 +106,164 @@ export const App: React.FC = () => {
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
 
-  // Nạp file Word - Tự động thu gọn bảng nạp sau khi hoàn tất
-  const handleWordUpload = async (file: File) => {
+  // Nạp nhiều file Word (.docx) cùng lúc
+  const handleWordUploadMultiple = async (files: File[]) => {
     try {
-      const buffer = await file.arrayBuffer();
-      setWordBuffer(buffer);
-      setWordFileName(file.name);
-      const { html, tags } = await extractHtmlFromDocx(buffer);
-      setTemplateHtml(html);
-      setDetectedWordTags(tags);
-      if (excelFileName) setIsImportCollapsed(true);
+      const newItems: UploadedWordItem[] = [];
+      for (const file of files) {
+        const buffer = await file.arrayBuffer();
+        const { html, tags } = await extractHtmlFromDocx(buffer);
+        newItems.push({
+          id: `word-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          name: file.name,
+          size: file.size,
+          buffer,
+          html,
+          tags
+        });
+      }
+
+      setWordFiles(prev => {
+        const combined = [...prev, ...newItems];
+        return combined;
+      });
+
+      // Kích hoạt ngay file đầu tiên được chọn
+      if (newItems.length > 0) {
+        const first = newItems[0];
+        setActiveWordId(first.id);
+        setWordBuffer(first.buffer);
+        setWordFileName(first.name);
+        setTemplateHtml(first.html);
+        setDetectedWordTags(first.tags);
+      }
+
+      // Tự động thu gọn bảng nạp nếu đã có cả Excel và Word
+      if (excelFiles.length > 0 || excelFileName) {
+        setIsImportCollapsed(true);
+      }
     } catch (err: any) {
       alert(err.message || 'Lỗi khi đọc file Word.');
     }
   };
 
-  // Nạp file Excel - Tự động thu gọn bảng nạp sau khi hoàn tất
-  const handleExcelUpload = async (file: File) => {
+  // Nạp nhiều file Excel (.xlsx, .xls) cùng lúc
+  const handleExcelUploadMultiple = async (files: File[]) => {
     try {
-      const parsed = await readExcelFile(file);
-      setWorkbook(parsed.workbook);
-      setSheetNames(parsed.sheetNames);
-      setActiveSheet(parsed.activeSheet);
-      setExcelData(parsed.data);
-      setExcelFileName(file.name);
-      setCurrentIndex(0);
-      setIsPreviewMode(true);
-      if (wordFileName) setIsImportCollapsed(true);
+      const newItems: UploadedExcelItem[] = [];
+      for (const file of files) {
+        const parsed = await readExcelFile(file);
+        newItems.push({
+          id: `excel-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          name: file.name,
+          size: file.size,
+          workbook: parsed.workbook,
+          sheetNames: parsed.sheetNames,
+          activeSheet: parsed.activeSheet,
+          data: parsed.data
+        });
+      }
+
+      setExcelFiles(prev => [...prev, ...newItems]);
+
+      // Kích hoạt ngay file Excel đầu tiên
+      if (newItems.length > 0) {
+        const first = newItems[0];
+        setActiveExcelId(first.id);
+        setExcelFileName(first.name);
+        setWorkbook(first.workbook);
+        setSheetNames(first.sheetNames);
+        setActiveSheet(first.activeSheet);
+        setExcelData(first.data);
+        setCurrentIndex(0);
+        setIsPreviewMode(true);
+      }
+
+      // Tự động thu gọn bảng nạp nếu đã có cả Word và Excel
+      if (wordFiles.length > 0 || wordFileName) {
+        setIsImportCollapsed(true);
+      }
     } catch (err: any) {
       alert(err.message || 'Lỗi khi đọc file Excel.');
     }
+  };
+
+  // Chọn file Word làm mẫu đang hiển thị
+  const handleSelectActiveWord = (id: string) => {
+    const item = wordFiles.find(f => f.id === id);
+    if (!item) return;
+    setActiveWordId(id);
+    setWordBuffer(item.buffer);
+    setWordFileName(item.name);
+    setTemplateHtml(item.html);
+    setDetectedWordTags(item.tags);
+  };
+
+  // Xóa file Word (hỗ trợ xóa hàng loạt)
+  const handleDeleteWordFiles = (ids: string[]) => {
+    setWordFiles(prev => {
+      const remaining = prev.filter(f => !ids.includes(f.id));
+      if (ids.includes(activeWordId || '')) {
+        if (remaining.length > 0) {
+          const next = remaining[0];
+          setActiveWordId(next.id);
+          setWordBuffer(next.buffer);
+          setWordFileName(next.name);
+          setTemplateHtml(next.html);
+          setDetectedWordTags(next.tags);
+        } else {
+          setActiveWordId(null);
+          setWordBuffer(null);
+          setWordFileName(null);
+          setTemplateHtml('');
+          setDetectedWordTags([]);
+          setIsImportCollapsed(false);
+        }
+      }
+      return remaining;
+    });
+  };
+
+  // Chọn file Excel đang làm việc
+  const handleSelectActiveExcel = (id: string) => {
+    const item = excelFiles.find(f => f.id === id);
+    if (!item) return;
+    setActiveExcelId(id);
+    setExcelFileName(item.name);
+    setWorkbook(item.workbook);
+    setSheetNames(item.sheetNames);
+    setActiveSheet(item.activeSheet);
+    setExcelData(item.data);
+    setCurrentIndex(0);
+  };
+
+  // Xóa file Excel (hỗ trợ xóa hàng loạt)
+  const handleDeleteExcelFiles = (ids: string[]) => {
+    setExcelFiles(prev => {
+      const remaining = prev.filter(f => !ids.includes(f.id));
+      if (ids.includes(activeExcelId || '')) {
+        if (remaining.length > 0) {
+          const next = remaining[0];
+          setActiveExcelId(next.id);
+          setExcelFileName(next.name);
+          setWorkbook(next.workbook);
+          setSheetNames(next.sheetNames);
+          setActiveSheet(next.activeSheet);
+          setExcelData(next.data);
+          setCurrentIndex(0);
+        } else {
+          setActiveExcelId(null);
+          setExcelFileName(null);
+          setWorkbook(null);
+          setSheetNames([]);
+          setActiveSheet('');
+          setExcelData({ sheetName: '', headers: [], rows: [], totalRows: 0 });
+          setCurrentIndex(0);
+          setIsImportCollapsed(false);
+        }
+      }
+      return remaining;
+    });
   };
 
   // Chọn Sheet
@@ -143,17 +275,43 @@ export const App: React.FC = () => {
     setCurrentIndex(0);
   };
 
-  // Dùng thử mẫu có sẵn - Tự động thu gọn bảng nạp
+  // Dùng thử mẫu có sẵn (Nạp mẫu hoàn chỉnh và thu gọn bảng nạp)
   const handleLoadSample = () => {
-    const sample = getSampleExcelData();
-    const sampleBuffer = getDefaultSampleDocxBuffer();
-    setWordBuffer(sampleBuffer);
-    setTemplateHtml(DEFAULT_SAMPLE_TEMPLATE_HTML);
-    setWordFileName('Mau_Giay_Moi_Hoi_Nghi_2026.docx');
-    setExcelFileName('DanhSach_DaiBieu_2026.xlsx');
+    const sampleWordBuf = getDefaultSampleDocxBuffer();
+    const wordItem: UploadedWordItem = {
+      id: 'sample-word-1',
+      name: 'Mau_Giay_Moi_Hoi_Nghi_2026.docx',
+      size: sampleWordBuf.byteLength,
+      buffer: sampleWordBuf,
+      html: DEFAULT_SAMPLE_TEMPLATE_HTML,
+      tags: ['DonVi', 'SoThuTu', 'Ngay', 'Thang', 'Nam', 'HoVaTen', 'ChucVu', 'SoDienThoai', 'Email', 'MaDaiBieu', 'DiaDiem', 'SoGhe', 'GhiChu']
+    };
+
+    const sampleExcel = getSampleExcelData();
+    const excelItem: UploadedExcelItem = {
+      id: 'sample-excel-1',
+      name: 'DanhSach_DaiBieu_2026.xlsx',
+      size: 15420,
+      workbook: null,
+      sheetNames: ['DanhSachMoi'],
+      activeSheet: 'DanhSachMoi',
+      data: sampleExcel
+    };
+
+    setWordFiles([wordItem]);
+    setActiveWordId(wordItem.id);
+    setWordBuffer(sampleWordBuf);
+    setWordFileName(wordItem.name);
+    setTemplateHtml(wordItem.html);
+    setDetectedWordTags(wordItem.tags);
+
+    setExcelFiles([excelItem]);
+    setActiveExcelId(excelItem.id);
+    setExcelFileName(excelItem.name);
+    setWorkbook(null);
     setSheetNames(['DanhSachMoi']);
     setActiveSheet('DanhSachMoi');
-    setExcelData(sample);
+    setExcelData(sampleExcel);
     setCurrentIndex(0);
     setIsPreviewMode(true);
     setIsImportCollapsed(true);
@@ -162,15 +320,22 @@ export const App: React.FC = () => {
   // Xóa danh sách import (Clear Import Standard)
   const handleClearImport = () => {
     if (confirm('Bạn có chắc chắn muốn xóa toàn bộ danh sách import và làm sạch trạng thái?')) {
+      setWordFiles([]);
+      setActiveWordId(null);
       setWordFileName(null);
       setWordBuffer(null);
+      setTemplateHtml('');
+      setDetectedWordTags([]);
+
+      setExcelFiles([]);
+      setActiveExcelId(null);
       setExcelFileName(null);
       setWorkbook(null);
       setSheetNames([]);
       setActiveSheet('');
       setExcelData({ sheetName: '', headers: [], rows: [], totalRows: 0 });
       setCurrentIndex(0);
-      setTemplateHtml(DEFAULT_SAMPLE_TEMPLATE_HTML);
+
       setIsPreviewMode(false);
       setIsImportCollapsed(false);
     }
@@ -184,9 +349,9 @@ export const App: React.FC = () => {
   // In bản ghi hiện tại qua iframe cách ly
   const handlePrintCurrent = () => {
     const mergedHtml = renderMergedHtml(templateHtml, currentRow, true);
-    const font = settings.preserveOriginalFormat ? 'Times New Roman, serif' : selectedFont.family;
-    const size = settings.preserveOriginalFormat ? '13pt' : settings.fontSize;
-    const lineH = settings.preserveOriginalFormat ? '1.4' : settings.lineHeight;
+    const font = settings.preserveOriginalFormat ? 'inherit' : selectedFont.family;
+    const size = settings.preserveOriginalFormat ? 'inherit' : settings.fontSize;
+    const lineH = settings.preserveOriginalFormat ? 'inherit' : settings.lineHeight;
 
     printIsolatedDocument([mergedHtml], font, size, lineH);
   };
@@ -199,9 +364,9 @@ export const App: React.FC = () => {
     }
 
     const pagesHtml = excelData.rows.map(row => renderMergedHtml(templateHtml, row, true));
-    const font = settings.preserveOriginalFormat ? 'Times New Roman, serif' : selectedFont.family;
-    const size = settings.preserveOriginalFormat ? '13pt' : settings.fontSize;
-    const lineH = settings.preserveOriginalFormat ? '1.4' : settings.lineHeight;
+    const font = settings.preserveOriginalFormat ? 'inherit' : selectedFont.family;
+    const size = settings.preserveOriginalFormat ? 'inherit' : settings.fontSize;
+    const lineH = settings.preserveOriginalFormat ? 'inherit' : settings.lineHeight;
 
     printIsolatedDocument(pagesHtml, font, size, lineH);
   };
@@ -285,9 +450,17 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-slate-50 text-slate-900 transition-colors"
+      className="min-h-screen flex flex-col bg-slate-50 text-slate-900 transition-colors relative"
       style={{ fontFamily: currentUiFont.cssFamily }}
     >
+      {/* Hiệu ứng nền Gradient trang nhã lan tỏa theo chủ đề */}
+      <div
+        className="pointer-events-none fixed inset-0 opacity-[0.035] -z-10 transition-all duration-700"
+        style={{
+          background: `radial-gradient(circle at 50% 0%, ${currentTheme.previewColors[0]}, ${currentTheme.previewColors[1]}, transparent 70%)`
+        }}
+      />
+
       {/* Header với Theme Gradient động */}
       <Header
         activeTab={activeTab}
@@ -327,18 +500,25 @@ export const App: React.FC = () => {
         {/* Tab Nội dung */}
         {activeTab === 'merge' && (
           <div className="space-y-3.5">
-            {/* Bước 1: Nạp file Word & Excel (Tự động thu gọn sau khi đã nạp) */}
+            {/* Bước 1: Nạp file Word & Excel (Hiển thị ngay khi mở trang, hỗ trợ nhiều file & xóa hàng loạt) */}
             <FileImportSection
-              onWordUpload={handleWordUpload}
-              onExcelUpload={handleExcelUpload}
+              onWordUploadMultiple={handleWordUploadMultiple}
+              onExcelUploadMultiple={handleExcelUploadMultiple}
               onLoadSample={handleLoadSample}
               onClearImport={handleClearImport}
-              wordFileName={wordFileName}
-              excelFileName={excelFileName}
+              wordFiles={wordFiles}
+              activeWordId={activeWordId}
+              onSelectActiveWord={handleSelectActiveWord}
+              onDeleteWordFiles={handleDeleteWordFiles}
+              excelFiles={excelFiles}
+              activeExcelId={activeExcelId}
+              onSelectActiveExcel={handleSelectActiveExcel}
+              onDeleteExcelFiles={handleDeleteExcelFiles}
               totalRecords={excelData.rows.length}
               totalColumns={excelData.headers.length}
               isCollapsed={isImportCollapsed}
               onToggleCollapse={() => setIsImportCollapsed(!isImportCollapsed)}
+              theme={currentTheme}
             />
 
             {/* Bước 2: Thanh điều khiển Chọn Sheet & Cấu hình Font chữ */}
@@ -350,6 +530,7 @@ export const App: React.FC = () => {
               onUpdateSettings={handleUpdateSettings}
               totalRecords={excelData.rows.length}
               totalColumns={excelData.headers.length}
+              theme={currentTheme}
             />
 
             {/* Bố cục 2 cột: Cột trái Word (cuộn độc lập) & Cột phải Cột Excel (cố định sticky) */}
@@ -378,6 +559,7 @@ export const App: React.FC = () => {
                   onExportZipAll={handleExportZipAll}
                   hasTemplate={Boolean(templateHtml)}
                   hasExcel={excelData.rows.length > 0}
+                  theme={currentTheme}
                 />
               </div>
 
@@ -392,6 +574,7 @@ export const App: React.FC = () => {
                   onNextRecord={() => setCurrentIndex(prev => Math.min(excelData.rows.length - 1, prev + 1))}
                   onInsertTag={handleInsertTag}
                   activeSheet={activeSheet}
+                  theme={currentTheme}
                 />
               </div>
             </div>

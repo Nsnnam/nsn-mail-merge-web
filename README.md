@@ -5,7 +5,7 @@
 > Tuân thủ chuẩn **NSN App Standard** · Offline 100% Client-Side trong bộ nhớ trình duyệt.
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Online-blue?style=flat-square&logo=github)](https://Nsnnam.github.io/nsn-mail-merge-web/)
-[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.3-emerald?style=flat-square)](CHANGELOG.md)
+[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.4-emerald?style=flat-square)](CHANGELOG.md)
 [![Tác giả](https://img.shields.io/badge/Tác_giả-Nguyễn_Sơn_Nam-indigo?style=flat-square)](AUTHORS.md)
 [![Ủng hộ](https://img.shields.io/badge/Mời_cà_phê-BIDV_8855989777-amber?style=flat-square)](SUPPORT.md)
 
@@ -14,14 +14,15 @@
 ## 🌟 Tính năng nổi bật
 
 1. **Giao diện hiện đại & Tối ưu không gian làm việc**:
-   - **Tự động thu gọn bảng nạp tệp**: Sau khi nạp file Word và Excel thành công, bảng nạp tệp tự động thu gọn thành một thanh tóm tắt siêu mỏng, tối đa hóa diện tích soạn thảo văn bản và thao tác dữ liệu.
-   - **6 Chủ đề Gradient cao cấp**: Xanh Biển Hiện Đại (Ocean), Hoàng Hôn Tím Hồng (Sunset), Ngọc Bích Công Nghệ (Emerald), Đêm Huyền Bí (Midnight), Hổ Phách Năng Lượng (Amber), Cực Quang Xanh (Aurora).
+   - **Mặc định hiển thị bảng nạp tệp**: Khi khởi tạo trang web, bảng nạp tệp hiển thị rõ ràng, thân thiện; sau khi người dùng nạp file Word và Excel, bảng sẽ tự động thu gọn để tối ưu hóa diện tích làm việc.
+   - **Nạp nhiều file cùng lúc & Xóa hàng loạt**: Cho phép kéo thả hoặc chọn nhiều file Word (.docx) và nhiều file Excel (.xlsx) cùng lúc, kèm bảng quản lý tệp, chuyển đổi nhanh giữa các mẫu và xóa hàng loạt (Bulk Delete).
+   - **6 Chủ đề Gradient cao cấp**: Xanh Biển Hiện Đại (Ocean), Hoàng Hôn Tím Hồng (Sunset), Ngọc Bích Công Nghệ (Emerald), Đêm Huyền Bí (Midnight), Hổ Phách Năng Lượng (Amber), Cực Quang Xanh (Aurora) lan tỏa toàn diện từ thanh tiêu đề, viền phát sáng đến các nút bấm thao tác.
    - **Đổi font toàn bộ giao diện Web**: Cho phép chuyển đổi nhanh giữa *Be Vietnam Pro*, *Inter*, *Roboto*, *Montserrat*, *Nunito*, *Open Sans* và tự động lưu bền vững vào `localStorage`.
    - **Bố cục 2 cột thông minh**: Cột trái chứa trang văn bản Word A4 cuộn độc lập mượt mà; cột phải chứa **Cột Excel khả dụng** luôn ghim cố định (`sticky`), hỗ trợ tìm kiếm cột và đối chiếu nhanh.
-2. **Nhập mẫu Word (.docx) & Tự động nhận diện biến**:
-   - Trích xuất định dạng HTML trực quan từ file Word mẫu.
-   - Quét và gợi ý các thẻ placeholder dạng `{{Tên_Cột}}` hoặc `{Tên_Cột}`.
-   - Nhúng sẵn file mẫu nhị phân `.docx` OpenXML để đảm bảo định dạng chuẩn mực ngay từ đầu.
+2. **Bảo toàn 100% định dạng, màu sắc & Bảng biểu Word gốc**:
+   - Tích hợp bộ phân tích OpenXML trực tiếp: Bảo toàn màu sắc văn bản (Heading blue, text color, highlight, shading), đường viền bảng biểu (TableGrid), độ rộng từng cột và căn lề.
+   - Tự động nhận diện và chuyển hóa các trường trộn bản địa của Microsoft Word (`MERGEFIELD`) sang cú pháp thẻ `{{Tên_Cột}}`.
+   - Mặc định kích hoạt chế độ **"Giữ nguyên định dạng ban đầu của file Word gốc"**.
 3. **Chèn biến chính xác vào con trỏ & Bôi đen**:
    - **Khi bôi đen chữ**: Bấm nút *"+ Chèn vào con trỏ"* sẽ **xóa và thay thế đè đúng đoạn chữ đang bôi đen** bằng thẻ `{{Tên_Cột}}`.
    - **Khi con trỏ đang nhấp nháy**: Biến được chèn chuẩn xác ngay tại vị trí con trỏ (kể cả trong bảng biểu).
@@ -45,7 +46,7 @@
 - **Phiên bản Online (GitHub Pages):**  
   👉 **[https://Nsnnam.github.io/nsn-mail-merge-web/](https://Nsnnam.github.io/nsn-mail-merge-web/)**
 - **Phiên bản Offline (Single HTML):**  
-  File phát hành: `releases/namns-mergeword-v1.0.3-offline.html` (nhấp đúp chuột là mở chạy ngay).
+  File phát hành: `releases/namns-mergeword-v1.0.4-offline.html` (nhấp đúp chuột là mở chạy ngay).
 
 ---
 

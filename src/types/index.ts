@@ -30,3 +30,23 @@ export interface TemplateFile {
   htmlContent: string;
   detectedTags: string[];
 }
+
+export interface UploadedWordItem {
+  id: string;
+  name: string;
+  size: number;
+  buffer: ArrayBuffer;
+  html: string;
+  tags: string[];
+}
+
+export interface UploadedExcelItem {
+  id: string;
+  name: string;
+  size: number;
+  workbook: any;
+  sheetNames: string[];
+  activeSheet: string;
+  data: ExcelSheetData;
+}
+

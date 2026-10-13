@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Tag, Search, Plus, Copy, Check, Info, Layers, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
 
+import { ThemeGradient } from '../lib/theme';
+
 interface ExcelColumnsSidebarProps {
   headers: string[];
   sampleRow: Record<string, string | number> | null;
@@ -10,6 +12,7 @@ interface ExcelColumnsSidebarProps {
   onNextRecord: () => void;
   onInsertTag: (tag: string) => void;
   activeSheet: string;
+  theme?: ThemeGradient;
 }
 
 export const ExcelColumnsSidebar: React.FC<ExcelColumnsSidebarProps> = ({
@@ -20,7 +23,8 @@ export const ExcelColumnsSidebar: React.FC<ExcelColumnsSidebarProps> = ({
   onPrevRecord,
   onNextRecord,
   onInsertTag,
-  activeSheet
+  activeSheet,
+  theme
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
@@ -49,7 +53,7 @@ export const ExcelColumnsSidebar: React.FC<ExcelColumnsSidebarProps> = ({
       <div className="p-4 border-b border-slate-200 bg-slate-50/80">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${theme ? `${theme.accentBg} ${theme.accentText}` : 'bg-blue-100 text-blue-700'}`}>
               <Tag className="w-4 h-4" />
             </div>
             <div>
@@ -57,11 +61,11 @@ export const ExcelColumnsSidebar: React.FC<ExcelColumnsSidebarProps> = ({
                 Cột Excel khả dụng
               </h3>
               <span className="text-[11px] text-slate-500">
-                Sheet: <strong className="text-blue-700">{activeSheet || 'Chưa chọn'}</strong>
+                Sheet: <strong className={theme ? theme.accentText : 'text-blue-700'}>{activeSheet || 'Chưa chọn'}</strong>
               </span>
             </div>
           </div>
-          <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-2xs">
+          <span className={`text-xs px-2 py-0.5 rounded-full font-bold shadow-2xs ${theme ? theme.primaryBtn : 'bg-blue-600 text-white'}`}>
             {headers.length} cột
           </span>
         </div>

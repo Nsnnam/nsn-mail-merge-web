@@ -77,4 +77,64 @@
     border-collapse: collapse;
     width: 100%;
   }
+
+  table td, table th {
+    border: 1px solid #000000 !important;
+    padding: 6px 10px !important;
+  }
+}
+
+/* Định dạng chuẩn Word cho khu vực biên tập & xem trước văn bản */
+.document-content table,
+#printable-document table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 12px 0 !important;
+  border: 1px solid #000000 !important;
+}
+
+.document-content table tr,
+#printable-document table tr {
+  min-height: 26px !important;
+}
+
+.document-content table td,
+.document-content table th,
+#printable-document table td,
+#printable-document table th {
+  border: 1px solid #000000 !important;
+  padding: 6px 10px !important;
+  vertical-align: top !important;
+  min-height: 26px !important;
+  min-width: 32px !important;
+  word-break: break-word !important;
+}
+
+.document-content table th,
+#printable-document table th {
+  background-color: #f8fafc !important;
+  font-weight: bold !important;
+}
+
+.document-content h1 {
+  font-size: 16pt;
+  font-weight: bold;
+  margin: 12px 0 6px;
+}
+
+.document-content h2 {
+  font-size: 14pt;
+  font-weight: bold;
+  margin: 10px 0 5px;
+}
+
+.document-content h3 {
+  font-size: 13pt;
+  font-weight: bold;
+  margin: 8px 0 4px;
+}
+
+.document-content p {
+  margin-top: 0;
+  margin-bottom: 0.35em;
 }

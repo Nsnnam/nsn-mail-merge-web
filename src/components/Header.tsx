@@ -24,12 +24,14 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+      {/* Thanh viền Gradient đa sắc tương ứng chủ đề đã chọn */}
+      <div className={`h-1.5 w-full bg-gradient-to-r ${theme.gradientClass} transition-all`} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & App Title */}
           <div className="flex items-center space-x-3 cursor-pointer select-none" onClick={() => setActiveTab('merge')}>
             {/* Custom Modern Vector Logo Namns Merge Word */}
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${theme.gradientClass} p-2 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0 transition-all hover:scale-105`}>
+            <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${theme.gradientClass} p-2 flex items-center justify-center text-white shadow-md ${theme.glowShadow} flex-shrink-0 transition-all hover:scale-105`}>
               <svg viewBox="0 0 24 24" fill="none" className="w-full h-full" stroke="currentColor">
                 <rect x="2" y="2" width="13" height="17" rx="2" fill="white" fillOpacity="0.25" stroke="white" strokeWidth="1.5" />
                 <rect x="7" y="6" width="14" height="17" rx="2" fill="white" stroke="currentColor" strokeWidth="1.5" />
@@ -44,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <h1 className="font-extrabold text-slate-900 text-lg sm:text-xl tracking-tight">
                   {APP_META.name}
                 </h1>
-                <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold">
+                <span className={`text-xs px-2 py-0.5 rounded-full font-bold border ${theme.activeBadge}`}>
                   v{APP_META.version}
                 </span>
                 <span className="hidden md:inline-flex items-center gap-1 text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
@@ -60,8 +62,8 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Quick status badge */}
           <div className="hidden xl:flex items-center gap-2 text-xs">
             {wordLoaded && (
-              <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-200">
-                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" /> Mẫu Word
+              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border font-medium ${theme.accentBg} ${theme.accentText} ${theme.accentBorder}`}>
+                <CheckCircle2 className="w-3.5 h-3.5" /> Mẫu Word
               </span>
             )}
             {excelLoaded && (
@@ -76,10 +78,10 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Nút Cài đặt Giao diện Gradient */}
             <button
               onClick={onOpenThemeModal}
-              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200/80 text-slate-700 transition-colors flex items-center gap-1.5 shadow-2xs"
+              className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 border shadow-2xs ${theme.accentBg} ${theme.accentText} ${theme.accentBorder} hover:brightness-95`}
               title="Cài đặt giao diện Gradient & Font chữ website"
             >
-              <Palette className="w-3.5 h-3.5 text-blue-600" />
+              <Palette className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Giao diện</span>
             </button>
 
@@ -87,7 +89,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setActiveTab('guide')}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
                 activeTab === 'guide'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  ? theme.navActive
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -99,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setActiveTab('changelog')}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
                 activeTab === 'changelog'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  ? theme.navActive
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -111,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setActiveTab('author')}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
                 activeTab === 'author'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  ? theme.navActive
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >

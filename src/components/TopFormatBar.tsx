@@ -2,6 +2,7 @@ import React from 'react';
 import { Layers, Type } from 'lucide-react';
 import { VIETNAMESE_FONTS } from '../lib/fonts';
 import { DocumentSettings } from '../types';
+import { ThemeGradient } from '../lib/theme';
 
 interface TopFormatBarProps {
   sheetNames: string[];
@@ -11,6 +12,7 @@ interface TopFormatBarProps {
   onUpdateSettings: (newSettings: Partial<DocumentSettings>) => void;
   totalRecords: number;
   totalColumns: number;
+  theme?: ThemeGradient;
 }
 
 export const TopFormatBar: React.FC<TopFormatBarProps> = ({
@@ -20,7 +22,8 @@ export const TopFormatBar: React.FC<TopFormatBarProps> = ({
   settings,
   onUpdateSettings,
   totalRecords,
-  totalColumns
+  totalColumns,
+  theme
 }) => {
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-3 sm:px-5 shadow-xs">
@@ -28,8 +31,10 @@ export const TopFormatBar: React.FC<TopFormatBarProps> = ({
         {/* Chọn Sheet Excel */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-            <span className="w-5 h-5 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center text-[11px] font-bold">2</span>
-            <Layers className="w-4 h-4 text-blue-600" />
+            <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-bold ${theme ? theme.primaryBtn : 'bg-blue-600 text-white'}`}>
+              2
+            </span>
+            <Layers className="w-4 h-4 text-slate-600" />
             <span>Chọn Sheet:</span>
           </div>
 

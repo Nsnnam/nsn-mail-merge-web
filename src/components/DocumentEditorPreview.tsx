@@ -33,6 +33,7 @@ import {
 import { DocumentSettings } from '../types';
 import { VIETNAMESE_FONTS } from '../lib/fonts';
 import { renderMergedHtml } from '../lib/docxHelper';
+import { ThemeGradient } from '../lib/theme';
 
 export interface DocumentEditorHandle {
   insertTag: (tag: string) => void;
@@ -59,6 +60,7 @@ interface DocumentEditorPreviewProps {
   onExportZipAll: () => void;
   hasTemplate: boolean;
   hasExcel: boolean;
+  theme?: ThemeGradient;
 }
 
 export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEditorPreviewProps>(({
@@ -81,7 +83,8 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
   onExportSingleDocxAll,
   onExportZipAll,
   hasTemplate,
-  hasExcel
+  hasExcel,
+  theme
 }, ref) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
@@ -274,9 +277,9 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
         <div className="inline-flex rounded-lg border border-slate-300 p-0.5 bg-white shadow-2xs">
           <button
             onClick={() => setIsPreviewMode(false)}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all ${
               !isPreviewMode
-                ? 'bg-blue-600 text-white shadow-2xs'
+                ? theme ? theme.primaryBtn : 'bg-blue-600 text-white shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -285,9 +288,9 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
           </button>
           <button
             onClick={() => setIsPreviewMode(true)}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all ${
               isPreviewMode
-                ? 'bg-blue-600 text-white shadow-2xs'
+                ? theme ? theme.primaryBtn : 'bg-blue-600 text-white shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -329,7 +332,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                     onJumpToRecord(val - 1);
                   }
                 }}
-                className="w-11 text-center py-0.5 border border-slate-300 rounded font-bold text-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={`w-11 text-center py-0.5 border border-slate-300 rounded font-bold focus:outline-none focus:ring-1 focus:ring-blue-500 ${theme ? theme.accentText : 'text-blue-700'}`}
               />
               <span>/ <strong>{totalRecords}</strong></span>
             </div>
@@ -357,7 +360,9 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={onPrintCurrent}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-2xs"
+            className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg shadow-2xs transition-all ${
+              theme ? theme.primaryBtn : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
             title="In hoặc Lưu thành PDF bản ghi hiện tại qua trình duyệt (Ctrl+P)"
           >
             <Printer className="w-3.5 h-3.5" />
@@ -367,10 +372,12 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
           {totalRecords > 1 && (
             <button
               onClick={onPrintAll}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors"
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                theme ? `${theme.accentBg} ${theme.accentText} ${theme.accentBorder} hover:brightness-95` : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
+              }`}
               title="In hàng loạt hoặc xuất toàn bộ tất cả bản ghi ra PDF"
             >
-              <Printer className="w-3.5 h-3.5 text-indigo-600" />
+              <Printer className="w-3.5 h-3.5" />
               <span>In tất cả ({totalRecords})</span>
             </button>
           )}
@@ -387,10 +394,12 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
           {totalRecords > 1 && (
             <button
               onClick={onExportSingleDocxAll}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition-colors shadow-2xs"
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all shadow-2xs ${
+                theme ? `${theme.accentBg} ${theme.accentText} ${theme.accentBorder} hover:brightness-95` : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'
+              }`}
               title="Xuất toàn bộ tất cả bản ghi vào 1 file Word .docx duy nhất (tách từng trang chuẩn)"
             >
-              <Files className="w-3.5 h-3.5 text-purple-600" />
+              <Files className="w-3.5 h-3.5" />
               <span>Gộp 1 file .DOCX ({totalRecords})</span>
             </button>
           )}
