@@ -3,6 +3,134 @@ import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import JSZip from 'jszip';
 import { SAMPLE_DOCX_BASE64 } from './sampleDocxBase64';
+import { DocumentSettings, DocumentMargin } from '../types';
+
+/**
+ * Tính toán kích thước lề (Margin) hiệu lực theo cấu hình thiết lập
+ */
+export function getEffectiveMargin(settings: DocumentSettings): DocumentMargin {
+  if (settings.pageMargin === 'original' && settings.originalMargins) {
+    return settings.originalMargins;
+  }
+  if (settings.pageMargin === 'nd30') {
+    // Thông tư 30 / Nghị định 30/2020/NĐ-CP Phụ lục I: Trên 20-25mm, Dưới 20-25mm, Trái 30-35mm, Phải 15-20mm
+    return { top: 20, bottom: 20, left: 30, right: 15 };
+  }
+  if (settings.pageMargin === 'normal') {
+    return { top: 25.4, bottom: 25.4, left: 25.4, right: 25.4 };
+  }
+  if (settings.pageMargin === 'narrow') {
+    return { top: 12.7, bottom: 12.7, left: 12.7, right: 12.7 };
+  }
+  if (settings.pageMargin === 'moderate') {
+    return { top: 25.4, bottom: 25.4, left: 19.1, right: 19.1 };
+  }
+  if (settings.pageMargin === 'custom' && settings.customMargins) {
+    return settings.customMargins;
+  }
+  return settings.originalMargins || { top: 20, bottom: 20, left: 25, right: 20 };
+}
+
+/**
+ * Trích xuất lề trang và cỡ chữ mẫu từ OpenXML của file .docx
+ */
+export function extractDocxMetadata(arrayBuffer: ArrayBuffer): {
+  margins?: DocumentMargin;
+  defaultFontSize?: string;
+} {
+  try {
+    const zip = new PizZip(arrayBuffer);
+    const docXmlFile = zip.file('word/document.xml');
+    if (!docXmlFile) return {};
+    const docXml = docXmlFile.asText();
+
+    let margins: DocumentMargin | undefined = undefined;
+    const pgMarMatch = docXml.match(/<w:pgMar\b[^>]*>/);
+    if (pgMarMatch) {
+      const tag = pgMarMatch[0];
+      const topM = tag.match(/w:top="(-?\d+)"/);
+      const rightM = tag.match(/w:right="(-?\d+)"/);
+      const bottomM = tag.match(/w:bottom="(-?\d+)"/);
+      const leftM = tag.match(/w:left="(-?\d+)"/);
+
+      if (topM && rightM && bottomM && leftM) {
+        const topMm = Math.round((Math.abs(parseInt(topM[1], 10)) / 56.6929) * 10) / 10;
+        const rightMm = Math.round((Math.abs(parseInt(rightM[1], 10)) / 56.6929) * 10) / 10;
+        const bottomMm = Math.round((Math.abs(parseInt(bottomM[1], 10)) / 56.6929) * 10) / 10;
+        const leftMm = Math.round((Math.abs(parseInt(leftM[1], 10)) / 56.6929) * 10) / 10;
+
+        margins = {
+          top: Math.max(2, Math.min(60, topMm)),
+          right: Math.max(2, Math.min(60, rightMm)),
+          bottom: Math.max(2, Math.min(60, bottomMm)),
+          left: Math.max(2, Math.min(60, leftMm))
+        };
+      }
+    }
+
+    let defaultFontSize: string | undefined = undefined;
+    let szSource = docXml;
+    if (zip.file('word/styles.xml')) {
+      szSource += ' ' + zip.file('word/styles.xml')!.asText();
+    }
+    const szMatches = szSource.match(/<w:sz\b[^>]*w:val="(\d+)"/g);
+    if (szMatches && szMatches.length > 0) {
+      const counts: Record<string, number> = {};
+      szMatches.forEach(m => {
+        const valMatch = m.match(/w:val="(\d+)"/);
+        if (valMatch) {
+          const pt = `${parseInt(valMatch[1], 10) / 2}pt`;
+          counts[pt] = (counts[pt] || 0) + 1;
+        }
+      });
+      let maxCount = 0;
+      for (const [pt, count] of Object.entries(counts)) {
+        if (count > maxCount) {
+          maxCount = count;
+          defaultFontSize = pt;
+        }
+      }
+    }
+
+    return { margins, defaultFontSize };
+  } catch (err) {
+    console.warn('Lỗi trích xuất metadata docx:', err);
+    return {};
+  }
+}
+
+/**
+ * Áp dụng lề trang tùy chỉnh vào binary docx buffer (cập nhật thẻ <w:pgMar>)
+ */
+export function applyMarginToDocxBuffer(arrayBuffer: ArrayBuffer, margin: DocumentMargin): ArrayBuffer {
+  try {
+    const zip = new PizZip(arrayBuffer);
+    const docFile = zip.file('word/document.xml');
+    if (!docFile) return arrayBuffer;
+    let docXml = docFile.asText();
+
+    const topTwips = Math.round(margin.top * 56.6929);
+    const rightTwips = Math.round(margin.right * 56.6929);
+    const bottomTwips = Math.round(margin.bottom * 56.6929);
+    const leftTwips = Math.round(margin.left * 56.6929);
+
+    const newPgMar = `<w:pgMar w:top="${topTwips}" w:right="${rightTwips}" w:bottom="${bottomTwips}" w:left="${leftTwips}" w:header="720" w:footer="720" w:gutter="0"/>`;
+
+    if (/<w:pgMar\b[^>]*\/>/.test(docXml)) {
+      docXml = docXml.replace(/<w:pgMar\b[^>]*\/>/, newPgMar);
+    } else if (/<w:pgMar\b[^>]*>[\s\S]*?<\/w:pgMar>/.test(docXml)) {
+      docXml = docXml.replace(/<w:pgMar\b[^>]*>[\s\S]*?<\/w:pgMar>/, newPgMar);
+    } else if (docXml.includes('</w:sectPr>')) {
+      docXml = docXml.replace('</w:sectPr>', `${newPgMar}</w:sectPr>`);
+    }
+
+    zip.file('word/document.xml', docXml);
+    return zip.generate({ type: 'arraybuffer' });
+  } catch (err) {
+    console.warn('Lỗi áp dụng lề vào file Word:', err);
+    return arrayBuffer;
+  }
+}
 
 /**
  * Lấy ArrayBuffer của file mẫu Word mặc định (được nhúng sẵn 100% offline)
@@ -315,13 +443,20 @@ export function normalizeDocxBuffer(arrayBuffer: ArrayBuffer): ArrayBuffer {
  * Trích xuất HTML từ file Word (.docx) để hiển thị trong Editor.
  * Ưu tiên trình phân tích OpenXML bảo toàn màu sắc và bảng, dự phòng bằng mammoth.
  */
-export async function extractHtmlFromDocx(arrayBuffer: ArrayBuffer): Promise<{ html: string; tags: string[] }> {
+export async function extractHtmlFromDocx(arrayBuffer: ArrayBuffer): Promise<{
+  html: string;
+  tags: string[];
+  margins?: DocumentMargin;
+  defaultFontSize?: string;
+}> {
   try {
+    const meta = extractDocxMetadata(arrayBuffer);
+
     // 1. Phân tích OpenXML trực tiếp bảo toàn 100% màu sắc và bảng biểu
     const openXmlHtml = parseDocxToHtml(arrayBuffer);
     if (openXmlHtml && openXmlHtml.length > 50) {
       const tags = extractTagsFromText(openXmlHtml);
-      return { html: openXmlHtml, tags };
+      return { html: openXmlHtml, tags, margins: meta.margins, defaultFontSize: meta.defaultFontSize };
     }
 
     // 2. Dự phòng bằng Mammoth nếu file có cấu trúc đặc biệt
@@ -338,7 +473,7 @@ export async function extractHtmlFromDocx(arrayBuffer: ArrayBuffer): Promise<{ h
     );
     const rawHtml = result.value || '';
     const tags = extractTagsFromText(rawHtml);
-    return { html: rawHtml, tags };
+    return { html: rawHtml, tags, margins: meta.margins, defaultFontSize: meta.defaultFontSize };
   } catch (error) {
     console.error('Lỗi đọc file Word:', error);
     throw new Error('Không thể đọc file Word. Vui lòng đảm bảo file có định dạng .docx hợp lệ.');
@@ -419,11 +554,16 @@ function prepareDataRecord(rowData: Record<string, string | number>): Record<str
  */
 export function generateMergedDocx(
   templateBuffer: ArrayBuffer,
-  rowData: Record<string, string | number>
+  rowData: Record<string, string | number>,
+  settings?: DocumentSettings
 ): Blob {
   try {
     const data = prepareDataRecord(rowData);
-    const cleanBuffer = normalizeDocxBuffer(templateBuffer);
+    let cleanBuffer = normalizeDocxBuffer(templateBuffer);
+    if (settings && settings.pageMargin !== 'original') {
+      const margin = getEffectiveMargin(settings);
+      cleanBuffer = applyMarginToDocxBuffer(cleanBuffer, margin);
+    }
 
     // Thử với delimiter {{ }}
     try {
@@ -478,7 +618,8 @@ function extractBodyXml(zip: PizZip): { contentWithoutSectPr: string; sectPr: st
  */
 export function generateMergedSingleDocx(
   templateBuffer: ArrayBuffer,
-  rows: Record<string, string | number>[]
+  rows: Record<string, string | number>[],
+  settings?: DocumentSettings
 ): Blob {
   if (rows.length === 0) {
     throw new Error('Không có dòng dữ liệu nào để xuất.');
@@ -486,10 +627,15 @@ export function generateMergedSingleDocx(
 
   // Nếu chỉ có 1 dòng, xuất trực tiếp
   if (rows.length === 1) {
-    return generateMergedDocx(templateBuffer, rows[0]);
+    return generateMergedDocx(templateBuffer, rows[0], settings);
   }
 
-  const cleanBuffer = normalizeDocxBuffer(templateBuffer);
+  let cleanBuffer = normalizeDocxBuffer(templateBuffer);
+  if (settings && settings.pageMargin !== 'original') {
+    const margin = getEffectiveMargin(settings);
+    cleanBuffer = applyMarginToDocxBuffer(cleanBuffer, margin);
+  }
+
   const combinedBodies: string[] = [];
   let finalSectPr = '';
   let baseXml = '';
@@ -545,9 +691,14 @@ export async function generateBulkZip(
   templateBuffer: ArrayBuffer,
   rows: Record<string, string | number>[],
   namingColumn?: string,
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  settings?: DocumentSettings
 ): Promise<Blob> {
-  const cleanBuffer = normalizeDocxBuffer(templateBuffer);
+  let cleanBuffer = normalizeDocxBuffer(templateBuffer);
+  if (settings && settings.pageMargin !== 'original') {
+    const margin = getEffectiveMargin(settings);
+    cleanBuffer = applyMarginToDocxBuffer(cleanBuffer, margin);
+  }
   const zip = new JSZip();
   const folder = zip.folder('merged_documents');
 
@@ -561,7 +712,7 @@ export async function generateBulkZip(
     const docName = `VanBan_${indexStr}${customName}.docx`;
 
     try {
-      const docxBlob = generateMergedDocx(cleanBuffer, row);
+      const docxBlob = generateMergedDocx(cleanBuffer, row, settings);
       folder?.file(docName, docxBlob);
     } catch (e) {
       console.warn(`Lỗi tại bản ghi số ${i + 1}:`, e);
@@ -583,8 +734,10 @@ export function printIsolatedDocument(
   htmlPages: string[],
   fontFamily: string,
   fontSize: string,
-  lineHeight: string
+  lineHeight: string,
+  margin?: DocumentMargin
 ) {
+  const m = margin || { top: 20, bottom: 20, left: 25, right: 20 };
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
@@ -611,7 +764,7 @@ export function printIsolatedDocument(
       <style>
         @page {
           size: A4 portrait;
-          margin: 15mm 15mm 15mm 20mm;
+          margin: 0;
         }
         * {
           box-sizing: border-box;
@@ -626,12 +779,12 @@ export function printIsolatedDocument(
           line-height: ${lineHeight};
         }
         .a4-page {
-          width: 100%;
-          min-height: 260mm;
+          width: 210mm;
+          min-height: 297mm;
           page-break-after: always;
           break-after: page;
           box-sizing: border-box;
-          padding: 5mm;
+          padding: ${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;
         }
         .a4-page:last-child {
           page-break-after: auto;

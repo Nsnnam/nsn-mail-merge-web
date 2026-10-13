@@ -38,11 +38,13 @@ import {
   Square,
   CheckSquare,
   Columns,
-  Rows
+  Rows,
+  Ruler,
+  Sliders
 } from 'lucide-react';
-import { DocumentSettings } from '../types';
+import { DocumentSettings, DocumentMargin, PageMarginType } from '../types';
 import { VIETNAMESE_FONTS } from '../lib/fonts';
-import { renderMergedHtml } from '../lib/docxHelper';
+import { renderMergedHtml, getEffectiveMargin } from '../lib/docxHelper';
 import { ThemeGradient } from '../lib/theme';
 
 export interface DocumentEditorHandle {
@@ -72,6 +74,7 @@ interface DocumentEditorPreviewProps {
   hasExcel: boolean;
   theme?: ThemeGradient;
   onOpenTemplateManager?: () => void;
+  onUpdateSettings?: (newSettings: Partial<DocumentSettings>) => void;
 }
 
 const SPECIAL_SYMBOLS = [
@@ -102,7 +105,8 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
   hasTemplate,
   hasExcel,
   theme,
-  onOpenTemplateManager
+  onOpenTemplateManager,
+  onUpdateSettings
 }, ref) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
@@ -116,6 +120,28 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
   const [isCustomTableModalOpen, setIsCustomTableModalOpen] = useState(false);
   const [customRows, setCustomRows] = useState(4);
   const [customCols, setCustomCols] = useState(4);
+  const [isMarginModalOpen, setIsMarginModalOpen] = useState(false);
+  const [tempMargins, setTempMargins] = useState<DocumentMargin>(
+    settings.customMargins || { top: 20, bottom: 20, left: 30, right: 15 }
+  );
+
+  const effectiveMargin = getEffectiveMargin(settings);
+
+  const handleMarginChange = (val: PageMarginType) => {
+    if (val === 'custom') {
+      setIsMarginModalOpen(true);
+    } else {
+      onUpdateSettings?.({ pageMargin: val });
+    }
+  };
+
+  const handleSaveCustomMargin = () => {
+    onUpdateSettings?.({
+      pageMargin: 'custom',
+      customMargins: tempMargins
+    });
+    setIsMarginModalOpen(false);
+  };
 
   // Lưu lại vị trí con trỏ / vùng bôi đen (selection)
   const saveSelection = () => {
@@ -688,6 +714,36 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
 
           <span className="w-px h-4 bg-slate-200 mx-1"></span>
 
+          {/* Căn lề trang (Margin) trực tiếp trên chế độ soạn thảo */}
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5" title={`Lề trang: T:${effectiveMargin.top}mm, D:${effectiveMargin.bottom}mm, T:${effectiveMargin.left}mm, P:${effectiveMargin.right}mm`}>
+            <Ruler className="w-3.5 h-3.5 text-blue-600" />
+            <select
+              value={settings.pageMargin}
+              onChange={(e) => handleMarginChange(e.target.value as PageMarginType)}
+              className="bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
+            >
+              <option value="original">
+                Lề gốc file Word {settings.originalMargins ? `(${settings.originalMargins.top}/${settings.originalMargins.bottom}/${settings.originalMargins.left}/${settings.originalMargins.right}mm)` : ''}
+              </option>
+              <option value="nd30">Nghị định 30 (20/20/30/15 mm)</option>
+              <option value="normal">Tiêu chuẩn (25.4 mm)</option>
+              <option value="narrow">Hẹp (12.7 mm)</option>
+              <option value="moderate">Vừa phải (25.4/19.1 mm)</option>
+              <option value="custom">Tùy chỉnh...</option>
+            </select>
+            {settings.pageMargin === 'custom' && (
+              <button
+                onClick={() => setIsMarginModalOpen(true)}
+                className="p-0.5 text-slate-500 hover:text-blue-600 rounded"
+                title="Chỉnh sửa thông số lề tùy chọn"
+              >
+                <Sliders className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          <span className="w-px h-4 bg-slate-200 mx-1"></span>
+
           {/* Kiểu đoạn văn (Heading / Normal) */}
           <select
             onChange={(e) => execFormat('formatBlock', e.target.value)}
@@ -700,22 +756,32 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             <option value="h3">Tiêu đề 3 (H3)</option>
           </select>
 
-          {/* Cỡ chữ lựa chọn nhanh */}
+          {/* Cỡ chữ lựa chọn nhanh (Đầy đủ từ 8pt đến 36pt) */}
           <select
-            onChange={(e) => applyInlineStyle('font-size', e.target.value)}
+            onChange={(e) => {
+              applyInlineStyle('font-size', e.target.value);
+              onUpdateSettings?.({ fontSize: e.target.value });
+            }}
             className="px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
             defaultValue=""
           >
-            <option value="" disabled>Cỡ chữ...</option>
+            <option value="" disabled>Cỡ chữ ({settings.fontSize})...</option>
+            <option value="8pt">8 pt</option>
+            <option value="9pt">9 pt</option>
             <option value="10pt">10 pt</option>
             <option value="11pt">11 pt</option>
             <option value="12pt">12 pt</option>
             <option value="13pt">13 pt (Chuẩn NĐ 30)</option>
             <option value="14pt">14 pt (Chuẩn NĐ 30)</option>
+            <option value="15pt">15 pt</option>
             <option value="16pt">16 pt</option>
             <option value="18pt">18 pt (Tiêu đề lớn)</option>
             <option value="20pt">20 pt</option>
+            <option value="22pt">22 pt</option>
             <option value="24pt">24 pt</option>
+            <option value="28pt">28 pt</option>
+            <option value="32pt">32 pt</option>
+            <option value="36pt">36 pt</option>
           </select>
 
           {/* Giãn dòng */}
@@ -729,7 +795,8 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             <option value="1.0">1.0 (Đơn)</option>
             <option value="1.15">1.15</option>
             <option value="1.25">1.25 (Gọn Word)</option>
-            <option value="1.4">1.4 (Chuẩn)</option>
+            <option value="1.3">1.3 (NĐ 30)</option>
+            <option value="1.4">1.4 (Chuẩn NĐ 30)</option>
             <option value="1.5">1.5</option>
             <option value="2.0">2.0 (Gấp đôi)</option>
           </select>
@@ -1228,19 +1295,135 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
         </div>
       )}
 
-      {/* Thông tin font & chế độ hiển thị */}
+      {/* MODAL TÙY CHỈNH LỀ TRANG (CUSTOM MARGIN DIALOG) TRỰC TIẾP TRÊN SOẠN THẢO */}
+      {isMarginModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-5 max-w-sm w-full space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <Sliders className="w-4 h-4 text-blue-600" />
+                <span>Tùy chỉnh lề trang (Millimeter - mm)</span>
+              </h4>
+              <button
+                onClick={() => setIsMarginModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Lề Trên (Top):</label>
+                <div className="flex items-center">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={tempMargins.top}
+                    onChange={(e) => setTempMargins({ ...tempMargins, top: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold"
+                  />
+                  <span className="bg-slate-100 border border-l-0 border-slate-300 px-2 py-1.5 rounded-r-lg text-slate-500 font-medium">mm</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Lề Dưới (Bottom):</label>
+                <div className="flex items-center">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={tempMargins.bottom}
+                    onChange={(e) => setTempMargins({ ...tempMargins, bottom: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold"
+                  />
+                  <span className="bg-slate-100 border border-l-0 border-slate-300 px-2 py-1.5 rounded-r-lg text-slate-500 font-medium">mm</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Lề Trái (Left):</label>
+                <div className="flex items-center">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={tempMargins.left}
+                    onChange={(e) => setTempMargins({ ...tempMargins, left: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold"
+                  />
+                  <span className="bg-slate-100 border border-l-0 border-slate-300 px-2 py-1.5 rounded-r-lg text-slate-500 font-medium">mm</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Lề Phải (Right):</label>
+                <div className="flex items-center">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={tempMargins.right}
+                    onChange={(e) => setTempMargins({ ...tempMargins, right: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold"
+                  />
+                  <span className="bg-slate-100 border border-l-0 border-slate-300 px-2 py-1.5 rounded-r-lg text-slate-500 font-medium">mm</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-[11px] text-blue-900">
+              <span className="font-semibold">💡 Chuẩn Nghị định 30/2020/NĐ-CP:</span>
+              <div className="text-blue-800 mt-0.5">
+                Trên: 20-25mm · Dưới: 20-25mm · Trái: 30-35mm · Phải: 15-20mm
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                onClick={() => setIsMarginModalOpen(false)}
+                className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSaveCustomMargin}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-lg shadow-2xs transition-all ${
+                  theme ? theme.primaryBtn : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                Lưu lề
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Thông tin font, lề & chế độ hiển thị */}
       <div className="bg-slate-100/70 px-4 py-2 text-xs text-slate-600 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span>Định dạng áp dụng:</span>
           {settings.preserveOriginalFormat ? (
             <span className="font-semibold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">
-              Giữ nguyên font chữ và định dạng ban đầu của file Word gốc
+              Giữ format gốc của file Word
             </span>
           ) : (
             <span className="font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-              {selectedFont.name} · {settings.fontSize} · Giãn dòng {settings.lineHeight}
+              {selectedFont.name} · {settings.fontSize} · Dòng {settings.lineHeight}
             </span>
           )}
+
+          {/* Huy hiệu thông số lề trang */}
+          <span className="inline-flex items-center gap-1 font-medium text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+            <Ruler className="w-3 h-3 text-blue-600" />
+            <span>Lề trang: T:{effectiveMargin.top} / D:{effectiveMargin.bottom} / T:{effectiveMargin.left} / P:{effectiveMargin.right} mm</span>
+          </span>
         </div>
 
         <div className="text-[11px]">
@@ -1264,7 +1447,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
           style={{
             width: '210mm',
             minHeight: '297mm',
-            padding: '20mm 20mm 20mm 25mm', // Chuẩn lề văn bản hành chính Việt Nam (Nghị định 30)
+            padding: `${effectiveMargin.top}mm ${effectiveMargin.right}mm ${effectiveMargin.bottom}mm ${effectiveMargin.left}mm`,
             boxSizing: 'border-box'
           }}
         >

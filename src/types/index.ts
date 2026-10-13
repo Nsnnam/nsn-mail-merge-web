@@ -14,13 +14,24 @@ export interface FontOption {
   description: string;
 }
 
+export interface DocumentMargin {
+  top: number; // đơn vị mm
+  bottom: number; // đơn vị mm
+  left: number; // đơn vị mm
+  right: number; // đơn vị mm
+}
+
+export type PageMarginType = 'original' | 'nd30' | 'normal' | 'narrow' | 'moderate' | 'custom';
+
 export interface DocumentSettings {
   fontId: string;
-  fontSize: string; // '13pt', '14pt', etc.
-  lineHeight: string; // '1.3', '1.5', etc.
+  fontSize: string; // '12pt', '13pt', '14pt', etc.
+  lineHeight: string; // '1.3', '1.4', '1.5', etc.
   textAlign: 'left' | 'center' | 'right' | 'justify';
   preserveOriginalFormat: boolean;
-  pageMargin: 'normal' | 'narrow' | 'wide';
+  pageMargin: PageMarginType;
+  customMargins: DocumentMargin;
+  originalMargins?: DocumentMargin;
 }
 
 export interface TemplateFile {
@@ -38,6 +49,8 @@ export interface UploadedWordItem {
   buffer: ArrayBuffer;
   html: string;
   tags: string[];
+  margins?: DocumentMargin;
+  defaultFontSize?: string;
 }
 
 export interface UploadedExcelItem {

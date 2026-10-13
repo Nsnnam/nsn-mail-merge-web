@@ -21,7 +21,8 @@ import {
   generateMergedDocx,
   generateMergedSingleDocx,
   generateBulkZip,
-  printIsolatedDocument
+  printIsolatedDocument,
+  getEffectiveMargin
 } from './lib/docxHelper';
 import { readExcelFile, extractSheetData, getSampleExcelData } from './lib/excelHelper';
 import {
@@ -36,6 +37,8 @@ import { saveAs } from 'file-saver';
 import { VIETNAMESE_FONTS } from './lib/fonts';
 import { Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+
+const sanitizeName = (str: string) => str.replace(/[/\\?%*:|"<>]/g, '_').trim();
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'merge' | 'guide' | 'changelog' | 'author' | 'coffee'>('merge');
@@ -86,14 +89,16 @@ export const App: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
 
-  // Cấu hình Định dạng: Mặc định giữ nguyên định dạng ban đầu của file gốc
+  // Cấu hình Định dạng: Font Times New Roman mặc định, lề theo file Word gốc, cỡ chữ 13pt chuẩn NĐ 30
   const [settings, setSettings] = useState<DocumentSettings>({
-    fontId: 'be-vietnam',
-    fontSize: '13pt',
+    fontId: 'times', // Font mặc định cho file Word tải lên là Times New Roman
+    fontSize: '13pt', // Cỡ chữ chuẩn NĐ 30 hoặc tự nhận diện theo file gốc
     lineHeight: '1.4',
     textAlign: 'justify',
-    preserveOriginalFormat: true, // Mặc định phải theo đúng dữ liệu định dạng gốc của file
-    pageMargin: 'normal'
+    preserveOriginalFormat: true, // Mặc định giữ đúng dữ liệu định dạng gốc của file
+    pageMargin: 'original', // Mặc định lề theo file Word tải lên
+    customMargins: { top: 20, bottom: 20, left: 30, right: 15 },
+    originalMargins: { top: 20, bottom: 20, left: 25, right: 20 }
   });
 
   // Trạng thái Xuất file & Thông báo
@@ -115,14 +120,16 @@ export const App: React.FC = () => {
       const newItems: UploadedWordItem[] = [];
       for (const file of files) {
         const buffer = await file.arrayBuffer();
-        const { html, tags } = await extractHtmlFromDocx(buffer);
+        const { html, tags, margins, defaultFontSize } = await extractHtmlFromDocx(buffer);
         newItems.push({
           id: `word-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           name: file.name,
           size: file.size,
           buffer,
           html,
-          tags
+          tags,
+          margins,
+          defaultFontSize
         });
       }
 
@@ -140,6 +147,15 @@ export const App: React.FC = () => {
         setTemplateHtml(first.html);
         setDetectedWordTags(first.tags);
         setIsPreviewMode(false); // Mặc định chế độ soạn thảo khi import
+
+        // Cập nhật cấu hình: font Times New Roman, lề theo file gốc, cỡ chữ theo mẫu
+        setSettings(prev => ({
+          ...prev,
+          fontId: 'times',
+          fontSize: first.defaultFontSize || prev.fontSize || '13pt',
+          pageMargin: 'original',
+          originalMargins: first.margins || prev.originalMargins
+        }));
       }
 
       // Tự động thu gọn bảng nạp nếu đã có cả Excel và Word
@@ -202,6 +218,14 @@ export const App: React.FC = () => {
     setTemplateHtml(item.html);
     setDetectedWordTags(item.tags);
     setIsPreviewMode(false);
+
+    setSettings(prev => ({
+      ...prev,
+      fontId: 'times',
+      fontSize: item.defaultFontSize || prev.fontSize || '13pt',
+      pageMargin: 'original',
+      originalMargins: item.margins || prev.originalMargins
+    }));
   };
 
   // Chọn mẫu từ Kho lưu trữ mẫu văn bản
@@ -294,13 +318,16 @@ export const App: React.FC = () => {
   // Dùng thử mẫu có sẵn (Nạp mẫu hoàn chỉnh và thu gọn bảng nạp)
   const handleLoadSample = () => {
     const sampleWordBuf = getDefaultSampleDocxBuffer();
+    const sampleMargins = { top: 20, bottom: 20, left: 30, right: 15 };
     const wordItem: UploadedWordItem = {
       id: 'sample-word-1',
       name: 'Mau_Giay_Moi_Hoi_Nghi_2026.docx',
       size: sampleWordBuf.byteLength,
       buffer: sampleWordBuf,
       html: DEFAULT_SAMPLE_TEMPLATE_HTML,
-      tags: ['DonVi', 'SoThuTu', 'Ngay', 'Thang', 'Nam', 'HoVaTen', 'ChucVu', 'SoDienThoai', 'Email', 'MaDaiBieu', 'DiaDiem', 'SoGhe', 'GhiChu']
+      tags: ['DonVi', 'SoThuTu', 'Ngay', 'Thang', 'Nam', 'HoVaTen', 'ChucVu', 'SoDienThoai', 'Email', 'MaDaiBieu', 'DiaDiem', 'SoGhe', 'GhiChu'],
+      margins: sampleMargins,
+      defaultFontSize: '13pt'
     };
 
     const sampleExcel = getSampleExcelData();
@@ -331,6 +358,15 @@ export const App: React.FC = () => {
     setCurrentIndex(0);
     setIsPreviewMode(false);
     setIsImportCollapsed(true);
+
+    // Cập nhật cấu hình cho mẫu: Font Times New Roman, cỡ 13pt, lề chuẩn Nghị định 30
+    setSettings(prev => ({
+      ...prev,
+      fontId: 'times',
+      fontSize: '13pt',
+      pageMargin: 'nd30',
+      originalMargins: sampleMargins
+    }));
   };
 
   // Xóa danh sách import (Clear Import Standard)
@@ -369,7 +405,7 @@ export const App: React.FC = () => {
     const size = settings.preserveOriginalFormat ? 'inherit' : settings.fontSize;
     const lineH = settings.preserveOriginalFormat ? 'inherit' : settings.lineHeight;
 
-    printIsolatedDocument([mergedHtml], font, size, lineH);
+    printIsolatedDocument([mergedHtml], font, size, lineH, getEffectiveMargin(settings));
   };
 
   // In toàn bộ bản ghi qua iframe cách ly
@@ -384,7 +420,7 @@ export const App: React.FC = () => {
     const size = settings.preserveOriginalFormat ? 'inherit' : settings.fontSize;
     const lineH = settings.preserveOriginalFormat ? 'inherit' : settings.lineHeight;
 
-    printIsolatedDocument(pagesHtml, font, size, lineH);
+    printIsolatedDocument(pagesHtml, font, size, lineH, getEffectiveMargin(settings));
   };
 
   // Xuất bản ghi hiện tại ra file Word (.docx) giữ nguyên 100% định dạng gốc
@@ -396,7 +432,7 @@ export const App: React.FC = () => {
 
     const buffer = wordBuffer || getDefaultSampleDocxBuffer();
     try {
-      const outBlob = generateMergedDocx(buffer, currentRow);
+      const outBlob = generateMergedDocx(buffer, currentRow, settings);
       const name = currentRow.HoVaTen
         ? `VanBan_${sanitizeName(String(currentRow.HoVaTen))}.docx`
         : `VanBan_BanGhi_${currentIndex + 1}.docx`;
@@ -419,7 +455,7 @@ export const App: React.FC = () => {
 
     setTimeout(() => {
       try {
-        const outBlob = generateMergedSingleDocx(buffer, excelData.rows);
+        const outBlob = generateMergedSingleDocx(buffer, excelData.rows, settings);
         const name = `Namns_Merge_Word_Gop_${excelData.rows.length}_Trang.docx`;
         saveAs(outBlob, name);
       } catch (err: any) {
@@ -449,7 +485,8 @@ export const App: React.FC = () => {
         'HoVaTen',
         (curr, total) => {
           setExportMessage(`Đang xử lý bản ghi ${curr} / ${total}...`);
-        }
+        },
+        settings
       );
       saveAs(zipBlob, `Namns_Merge_Word_${excelData.rows.length}_VanBan.zip`);
     } catch (err: any) {
@@ -459,10 +496,6 @@ export const App: React.FC = () => {
       setExportMessage('');
     }
   };
-
-  function sanitizeName(name: string) {
-    return name.replace(/[/\\?%*:|"<>]/g, '_').trim();
-  }
 
   return (
     <div
@@ -588,6 +621,7 @@ export const App: React.FC = () => {
                   hasExcel={excelData.rows.length > 0}
                   theme={currentTheme}
                   onOpenTemplateManager={() => setIsTemplateModalOpen(true)}
+                  onUpdateSettings={handleUpdateSettings}
                 />
               </div>
 

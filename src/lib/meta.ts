@@ -42,7 +42,7 @@ export const APP_META: AppMeta = {
   shortName: "Merge Word",
   description: "Chỉnh sửa và trộn thư",
   appCode: "NAMNSMERGE",
-  version: "1.0.5",
+  version: "1.0.6",
   date: "2026-10-13",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
@@ -50,6 +50,17 @@ export const APP_META: AppMeta = {
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.6",
+      date: "2026-10-13",
+      changes: [
+        "Tùy chỉnh lề trang (Margin) linh hoạt: Mặc định tự động theo file Word tải lên (trích xuất thẻ <w:pgMar> từ OpenXML, hỗ trợ đầy đủ các file lề hẹp chuyên dụng khám đoàn bệnh viện).",
+        "Hỗ trợ các preset lề phổ biến: Nghị định 30/2020/NĐ-CP (Trên 20mm, Dưới 20mm, Trái 30mm, Phải 15mm), Tiêu chuẩn (25.4mm), Hẹp (12.7mm), Vừa phải và Tùy chỉnh (nhập mm trực tiếp).",
+        "Đồng bộ lề trang toàn diện: Phản ánh trực quan trên Editor/Preview, chuẩn hóa kích thước in/PDF qua iframe cách ly, và cập nhật OpenXML <w:pgMar> khi xuất file Word .DOCX.",
+        "Thiết lập Font mặc định cho file Word tải lên là Times New Roman (id: 'times') chuẩn văn bản hành chính Việt Nam.",
+        "Cỡ chữ mặc định tự động theo mẫu tài liệu tải lên (hoặc 13pt chuẩn NĐ 30), mở rộng đầy đủ tùy chọn cỡ chữ từ 8pt đến 36pt trực tiếp trên thanh công cụ."
+      ]
+    },
     {
       version: "1.0.5",
       date: "2026-10-13",

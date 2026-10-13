@@ -1,7 +1,56 @@
 # Changelog — Nhật ký phát triển
 
-Tất cả thay đổi đáng chú ý của dự án **NSN Word Mail Merge Web Pro** được ghi lại tại đây theo chuẩn [Keep a Changelog](https://keepachangelog.com/) và [Semantic Versioning](https://semver.org/).  
+Tất cả thay đổi đáng chú ý của dự án **Namns Merge Word** được ghi lại tại đây theo chuẩn [Keep a Changelog](https://keepachangelog.com/) và [Semantic Versioning](https://semver.org/).  
 Múi giờ áp dụng: **Asia/Ho_Chi_Minh (GMT+7)**.
+
+---
+
+## [1.0.6] - 2026-10-13
+
+### Thêm mới & Nâng cấp (Added & Enhanced)
+- **Tùy chỉnh lề trang (Margin) linh hoạt:**
+  - Mặc định tự động theo file Word tải lên: Trích xuất `<w:pgMar>` từ cấu trúc OpenXML của file `.docx`, giữ nguyên vẹn lề trang ban đầu (kể cả lề hẹp chuyên dụng 5.1mm của phiếu khám đoàn bệnh viện).
+  - Tích hợp các preset lề: Nghị định 30/2020/NĐ-CP (Trên 20mm, Dưới 20mm, Trái 30mm đóng gáy, Phải 15mm), Tiêu chuẩn (25.4mm), Hẹp (12.7mm), Vừa phải (25.4/19.1mm).
+  - Hộp thoại Tùy chỉnh (Custom): Nhập trực tiếp thông số mm Trên, Dưới, Trái, Phải và lưu áp dụng ngay.
+  - Đồng bộ lề trang toàn diện: Phản ánh trực quan trên Editor/Preview (`padding`), chuẩn hóa khổ in A4 qua iframe cách ly, và tự động cập nhật thẻ `<w:pgMar>` của file Word `.docx` xuất ra nếu người dùng đổi lề.
+- **Phông chữ mặc định Times New Roman:**
+  - Thiết lập font mặc định cho file Word tải lên là **Times New Roman** (`id: 'times'`) chuẩn văn bản hành chính Việt Nam.
+- **Cỡ chữ mặc định & Đa dạng tùy chọn:**
+  - Tự động nhận diện cỡ chữ phổ biến của tài liệu Word tải lên (hoặc 13pt chuẩn NĐ 30).
+  - Mở rộng đầy đủ tùy chọn cỡ chữ từ 8pt đến 36pt (8pt, 9pt, 10pt, 11pt, 12pt, 13pt, 14pt, 15pt, 16pt, 18pt, 20pt, 22pt, 24pt, 28pt, 32pt, 36pt) trực tiếp trên thanh công cụ soạn thảo và thanh định dạng.
+
+---
+
+## [1.0.5] - 2026-10-13
+
+### Thêm mới & Nâng cấp (Added & Enhanced)
+- **Mặc định Chế độ Soạn thảo (Edit mode):** Tự động mở chế độ soạn thảo ngay khi nạp file hoặc đổi mẫu văn bản.
+- **Bảo toàn khoảng trắng & Tab spacer:** Giữ trọn vẹn nhiều dấu cách liên tiếp và khoảng cách Tab giữa các đoạn văn bản (Họ tên, Giới tính, Ngày sinh, SĐT... không bị dính chữ).
+- **Chuẩn hóa hiển thị bảng biểu:** Tự động căn giữa cột STT và dòng tiêu đề, lọc sạch các đoạn văn rỗng cuối ô.
+- **Bộ công cụ Table Suite toàn diện:** Thao tác thêm/xóa hàng trên/dưới, thêm/xóa cột trái/phải, căn lề ô (trái/giữa/phải/đều), căn dọc (đỉnh/giữa/đáy), đổi màu nền ô, viền nét liền/bỏ viền, tạo bảng tùy biến kích thước.
+- **Hỗ trợ phím Tab trực tiếp:** Nhấn phím Tab trong trình soạn thảo để nhảy thụt dòng thay vì mất focus.
+- **Ký tự đặc biệt & Ô kiểm:** Chèn nhanh dấu tích (✓, ✔), ô kiểm (☐, ☑), mũi tên, bullet, dấu sao.
+- **Kho lưu trữ mẫu & Sao lưu / Phục hồi (.JSON):** Quản lý mẫu trong LocalStorage và xuất/nhập file sao lưu .JSON.
+
+---
+
+## [1.0.4] - 2026-10-13
+
+### Sửa lỗi & Nâng cấp (Fixed & Enhanced)
+- Phân tích OpenXML trực tiếp: Bảo toàn 100% màu sắc (Heading blue, text color, highlight, shading), đường viền bảng và độ rộng cột.
+- Nhận diện và chuyển hóa MERGEFIELD sang {{Ten_Cot}}.
+- Nạp nhiều file cùng lúc (Multi-file upload) và xóa hàng loạt (Bulk Delete).
+- Mở rộng chủ đề Gradient toàn diện lên header, button, viền phát sáng.
+
+---
+
+## [1.0.3] - 2026-10-13
+
+### Thay đổi & Giao diện (Changed & UI)
+- Đổi tên ứng dụng ngắn gọn thành **"Namns Merge Word"**, mô tả **"Chỉnh sửa và trộn thư"**.
+- Thiết kế lại Logo vector & Icon web nhận diện thương hiệu chuyên nghiệp dạng đa lớp văn bản hiện đại.
+- Tự động thu gọn bảng nạp tệp sau khi đã nạp dữ liệu.
+- 6 chủ đề Gradient cao cấp và bộ font giao diện tiếng Việt bền vững.
 
 ---
 
