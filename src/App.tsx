@@ -1,0 +1,337 @@
+import React, { useState, useEffect } from 'react';
+import { Header } from './components/Header';
+import { FileImportSection } from './components/FileImportSection';
+import { DataMappingToolbar } from './components/DataMappingToolbar';
+import { DocumentEditorPreview } from './components/DocumentEditorPreview';
+import { GuideTab } from './components/GuideTab';
+import { ChangelogTab } from './components/ChangelogTab';
+import { AuthorTab } from './components/AuthorTab';
+import { CoffeeTab } from './components/CoffeeTab';
+import { Footer } from './components/Footer';
+import { DocumentSettings, ExcelSheetData } from './types';
+import {
+  DEFAULT_SAMPLE_TEMPLATE_HTML,
+  extractHtmlFromDocx,
+  extractTagsFromText,
+  renderMergedHtml,
+  generateMergedDocx,
+  generateBulkZip
+} from './lib/docxHelper';
+import { readExcelFile, extractSheetData, getSampleExcelData } from './lib/excelHelper';
+import { saveAs } from 'file-saver';
+import { VIETNAMESE_FONTS } from './lib/fonts';
+import { Loader2 } from 'lucide-react';
+import * as XLSX from 'xlsx';
+
+export const App: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'merge' | 'guide' | 'changelog' | 'author' | 'coffee'>('merge');
+
+  // Trạng thái Word template
+  const [wordFileName, setWordFileName] = useState<string | null>('Mau_Giay_Moi_Hoi_Nghi_2026.docx');
+  const [wordBuffer, setWordBuffer] = useState<ArrayBuffer | null>(null);
+  const [templateHtml, setTemplateHtml] = useState<string>(DEFAULT_SAMPLE_TEMPLATE_HTML);
+  const [detectedWordTags, setDetectedWordTags] = useState<string[]>([]);
+
+  // Trạng thái Excel
+  const [excelFileName, setExcelFileName] = useState<string | null>('DanhSach_DaiBieu_2026.xlsx');
+  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [sheetNames, setSheetNames] = useState<string[]>(['DanhSachMoi']);
+  const [activeSheet, setActiveSheet] = useState<string>('DanhSachMoi');
+  const [excelData, setExcelData] = useState<ExcelSheetData>(getSampleExcelData());
+
+  // Trạng thái Duyệt bản ghi
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [isPreviewMode, setIsPreviewMode] = useState<boolean>(true);
+
+  // Cấu hình Định dạng văn bản
+  const [settings, setSettings] = useState<DocumentSettings>({
+    fontId: 'be-vietnam',
+    fontSize: '13pt',
+    lineHeight: '1.4',
+    textAlign: 'justify',
+    preserveOriginalFormat: false,
+    pageMargin: 'normal'
+  });
+
+  // Trạng thái In ấn hàng loạt & Xuất file
+  const [isBulkPrinting, setIsBulkPrinting] = useState<boolean>(false);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportMessage, setExportMessage] = useState<string>('');
+
+  // Bản ghi hiện tại
+  const currentRow = excelData.rows.length > 0 ? excelData.rows[currentIndex] || null : null;
+
+  // Cập nhật cấu hình
+  const handleUpdateSettings = (newSettings: Partial<DocumentSettings>) => {
+    setSettings(prev => ({ ...prev, ...newSettings }));
+  };
+
+  // Nạp file Word
+  const handleWordUpload = async (file: File) => {
+    try {
+      const buffer = await file.arrayBuffer();
+      setWordBuffer(buffer);
+      setWordFileName(file.name);
+      const { html, tags } = await extractHtmlFromDocx(buffer);
+      setTemplateHtml(html);
+      setDetectedWordTags(tags);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi đọc file Word.');
+    }
+  };
+
+  // Nạp file Excel
+  const handleExcelUpload = async (file: File) => {
+    try {
+      const parsed = await readExcelFile(file);
+      setWorkbook(parsed.workbook);
+      setSheetNames(parsed.sheetNames);
+      setActiveSheet(parsed.activeSheet);
+      setExcelData(parsed.data);
+      setExcelFileName(file.name);
+      setCurrentIndex(0);
+      setIsPreviewMode(true);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi đọc file Excel.');
+    }
+  };
+
+  // Chọn Sheet
+  const handleSelectSheet = (sheetName: string) => {
+    if (!workbook) return;
+    const data = extractSheetData(workbook, sheetName);
+    setActiveSheet(sheetName);
+    setExcelData(data);
+    setCurrentIndex(0);
+  };
+
+  // Dùng thử mẫu có sẵn
+  const handleLoadSample = () => {
+    const sample = getSampleExcelData();
+    setTemplateHtml(DEFAULT_SAMPLE_TEMPLATE_HTML);
+    setWordFileName('Mau_Giay_Moi_Hoi_Nghi_2026.docx');
+    setExcelFileName('DanhSach_DaiBieu_2026.xlsx');
+    setSheetNames(['DanhSachMoi']);
+    setActiveSheet('DanhSachMoi');
+    setExcelData(sample);
+    setCurrentIndex(0);
+    setIsPreviewMode(true);
+  };
+
+  // Xóa danh sách import (Clear Import Standard)
+  const handleClearImport = () => {
+    if (confirm('Bạn có chắc chắn muốn xóa toàn bộ danh sách import và làm sạch trạng thái?')) {
+      setWordFileName(null);
+      setWordBuffer(null);
+      setExcelFileName(null);
+      setWorkbook(null);
+      setSheetNames([]);
+      setActiveSheet('');
+      setExcelData({ sheetName: '', headers: [], rows: [], totalRows: 0 });
+      setCurrentIndex(0);
+      setTemplateHtml(DEFAULT_SAMPLE_TEMPLATE_HTML);
+      setIsPreviewMode(false);
+    }
+  };
+
+  // Chèn tag vào template
+  const handleInsertTag = (tag: string) => {
+    const tagString = ` {{${tag}}} `;
+    setTemplateHtml(prev => prev + tagString);
+  };
+
+  // In bản ghi hiện tại
+  const handlePrintCurrent = () => {
+    setIsBulkPrinting(false);
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
+  // In toàn bộ bản ghi
+  const handlePrintAll = () => {
+    if (excelData.rows.length === 0) {
+      alert('Không có dữ liệu bản ghi để in.');
+      return;
+    }
+    setIsBulkPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setIsBulkPrinting(false);
+    }, 300);
+  };
+
+  // Xuất bản ghi hiện tại ra file Word
+  const handleExportDocxCurrent = () => {
+    if (!currentRow) {
+      alert('Chưa có dữ liệu bản ghi.');
+      return;
+    }
+
+    if (wordBuffer) {
+      try {
+        const outBlob = generateMergedDocx(wordBuffer, currentRow);
+        const name = currentRow.HoVaTen ? `VanBan_${currentRow.HoVaTen}.docx` : `VanBan_BanGhi_${currentIndex + 1}.docx`;
+        saveAs(outBlob, name);
+      } catch (err: any) {
+        alert(err.message || 'Lỗi khi xuất file docx.');
+      }
+    } else {
+      // Xuất file HTML Word-compatible nếu không có file buffer gốc
+      const mergedHtml = renderMergedHtml(templateHtml, currentRow);
+      const blob = new Blob([`
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"><title>Văn bản</title></head>
+        <body style="font-family: 'Times New Roman', serif; font-size: 13pt;">${mergedHtml}</body>
+        </html>
+      `], { type: 'application/msword;charset=utf-8' });
+      saveAs(blob, `VanBan_BanGhi_${currentIndex + 1}.doc`);
+    }
+  };
+
+  // Xuất tất cả bản ghi vào file ZIP
+  const handleExportZipAll = async () => {
+    if (!wordBuffer) {
+      alert('Chức năng xuất gói ZIP yêu cầu nạp file Word (.docx) mẫu từ máy tính của bạn.');
+      return;
+    }
+    if (excelData.rows.length === 0) {
+      alert('Không có dữ liệu trong file Excel.');
+      return;
+    }
+
+    setIsExporting(true);
+    setExportMessage(`Đang trộn và đóng gói ${excelData.rows.length} văn bản...`);
+
+    try {
+      const zipBlob = await generateBulkZip(
+        wordBuffer,
+        excelData.rows,
+        'HoVaTen',
+        (curr, total) => {
+          setExportMessage(`Đang xử lý bản ghi ${curr} / ${total}...`);
+        }
+      );
+      saveAs(zipBlob, `Tron_Thu_Hang_Loat_${excelData.rows.length}_VanBan.zip`);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi xuất file ZIP.');
+    } finally {
+      setIsExporting(false);
+      setExportMessage('');
+    }
+  };
+
+  const selectedFont = VIETNAMESE_FONTS.find(f => f.id === settings.fontId) || VIETNAMESE_FONTS[0];
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-be-vietnam">
+      {/* Header */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        wordLoaded={Boolean(wordFileName)}
+        excelLoaded={Boolean(excelFileName && excelData.rows.length > 0)}
+        totalRecords={excelData.rows.length}
+      />
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Loading overlay khi xuất ZIP */}
+        {isExporting && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-4 max-w-sm w-full mx-4 text-center">
+              <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Đang xử lý xuất hàng loạt</h3>
+                <p className="text-xs text-slate-500 mt-1">{exportMessage}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Nội dung */}
+        {activeTab === 'merge' && (
+          <div className="space-y-6">
+            {/* Bước 1: Nạp file Word & Excel */}
+            <FileImportSection
+              onWordUpload={handleWordUpload}
+              onExcelUpload={handleExcelUpload}
+              onLoadSample={handleLoadSample}
+              onClearImport={handleClearImport}
+              wordFileName={wordFileName}
+              excelFileName={excelFileName}
+              totalRecords={excelData.rows.length}
+              totalColumns={excelData.headers.length}
+            />
+
+            {/* Bước 2: Toolbar chọn Sheet, Cột & Font */}
+            <DataMappingToolbar
+              sheetNames={sheetNames}
+              activeSheet={activeSheet}
+              onSelectSheet={handleSelectSheet}
+              headers={excelData.headers}
+              sampleRow={currentRow}
+              onInsertTag={handleInsertTag}
+              settings={settings}
+              onUpdateSettings={handleUpdateSettings}
+            />
+
+            {/* Bước 3: Vùng Soạn thảo & Xem trước A4 */}
+            <DocumentEditorPreview
+              templateHtml={templateHtml}
+              onUpdateTemplateHtml={setTemplateHtml}
+              currentRow={currentRow}
+              currentIndex={currentIndex}
+              totalRecords={excelData.rows.length}
+              onPrevRecord={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+              onNextRecord={() => setCurrentIndex(prev => Math.min(excelData.rows.length - 1, prev + 1))}
+              onFirstRecord={() => setCurrentIndex(0)}
+              onLastRecord={() => setCurrentIndex(excelData.rows.length - 1)}
+              onJumpToRecord={(idx) => setCurrentIndex(idx)}
+              settings={settings}
+              isPreviewMode={isPreviewMode}
+              setIsPreviewMode={setIsPreviewMode}
+              onPrintCurrent={handlePrintCurrent}
+              onPrintAll={handlePrintAll}
+              onExportDocxCurrent={handleExportDocxCurrent}
+              onExportZipAll={handleExportZipAll}
+              hasTemplate={Boolean(templateHtml)}
+              hasExcel={excelData.rows.length > 0}
+            />
+          </div>
+        )}
+
+        {activeTab === 'guide' && <GuideTab />}
+        {activeTab === 'changelog' && <ChangelogTab />}
+        {activeTab === 'author' && <AuthorTab />}
+        {activeTab === 'coffee' && <CoffeeTab />}
+      </main>
+
+      {/* Khung in ẩn dành riêng cho In toàn bộ tất cả bản ghi */}
+      {isBulkPrinting && (
+        <div id="all-print-container" className="hidden print:block">
+          {excelData.rows.map((row, idx) => (
+            <div
+              key={idx}
+              className="bulk-print-item bg-white"
+              style={{
+                fontFamily: settings.preserveOriginalFormat ? 'inherit' : selectedFont.family,
+                fontSize: settings.preserveOriginalFormat ? 'inherit' : settings.fontSize,
+                lineHeight: settings.preserveOriginalFormat ? 'inherit' : settings.lineHeight
+              }}
+              dangerouslySetInnerHTML={{
+                __html: renderMergedHtml(templateHtml, row)
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Footer */}
+      <Footer onOpenTab={(tab) => setActiveTab(tab)} />
+    </div>
+  );
+};
+
+export default App;

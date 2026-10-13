@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900;
+  }
+}
+
+/* Kiểu in ấn chuyên nghiệp cho trang văn bản A4 */
+@page {
+  size: A4 portrait;
+  margin: 15mm 15mm 15mm 20mm;
+}
+
+@media print {
+  /* Ẩn tất cả các thành phần giao diện không cần in */
+  header,
+  footer,
+  .no-print,
+  button,
+  select,
+  input {
+    display: none !important;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .print-page {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  /* Khi in tất cả danh sách */
+  .bulk-print-item {
+    page-break-after: always !important;
+    break-after: page !important;
+    min-height: 270mm;
+    box-sizing: border-box;
+  }
+}
