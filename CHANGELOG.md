@@ -5,6 +5,16 @@ Múi giờ áp dụng: **Asia/Ho_Chi_Minh (GMT+7)**.
 
 ---
 
+## [1.0.1] - 2026-10-13
+
+### Thay đổi & Cải tiến (Changed & Fixed)
+- **Cải tiến bố cục giao diện (UX/Layout):** Chuyển phần **"Các cột Excel khả dụng"** sang thanh sidebar cố định bên phải (`sticky`), giúp người dùng thuận tiện lựa chọn và đối chiếu dữ liệu với văn bản mà không cần cuộn trang lên xuống.
+- **Cuộn văn bản độc lập:** Vùng soạn thảo và xem trước văn bản Word bên trái cuộn mượt mà độc lập, trong khi danh sách cột bên phải luôn ghim cố định trên màn hình.
+- **Sửa lỗi chèn biến (Precision Tag Insertion):** Sửa lỗi không chèn được biến vào vị trí con trỏ nhấp nháy hoặc chèn đè thay thế phần văn bản đang bôi đen. Hệ thống tự động ghi nhớ vùng chọn `Range`/`Selection` và thay thế chính xác tại vị trí con trỏ chuột.
+- **Tìm kiếm cột & Đối chiếu trực quan:** Bổ sung ô tìm kiếm nhanh tên cột và thanh lật nhanh các bản ghi đối chiếu ngay trên sidebar bên phải.
+
+---
+
 ## [1.0.0] - 2026-10-13
 
 ### Thêm mới (Added)

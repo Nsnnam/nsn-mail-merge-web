@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Header } from './components/Header';
 import { FileImportSection } from './components/FileImportSection';
-import { DataMappingToolbar } from './components/DataMappingToolbar';
-import { DocumentEditorPreview } from './components/DocumentEditorPreview';
+import { TopFormatBar } from './components/TopFormatBar';
+import { ExcelColumnsSidebar } from './components/ExcelColumnsSidebar';
+import { DocumentEditorPreview, DocumentEditorHandle } from './components/DocumentEditorPreview';
 import { GuideTab } from './components/GuideTab';
 import { ChangelogTab } from './components/ChangelogTab';
 import { AuthorTab } from './components/AuthorTab';
@@ -12,7 +13,6 @@ import { DocumentSettings, ExcelSheetData } from './types';
 import {
   DEFAULT_SAMPLE_TEMPLATE_HTML,
   extractHtmlFromDocx,
-  extractTagsFromText,
   renderMergedHtml,
   generateMergedDocx,
   generateBulkZip
@@ -25,6 +25,9 @@ import * as XLSX from 'xlsx';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'merge' | 'guide' | 'changelog' | 'author' | 'coffee'>('merge');
+
+  // Ref kết nối tới DocumentEditorPreview để chèn biến chính xác vào con trỏ / bôi đen
+  const editorRef = useRef<DocumentEditorHandle>(null);
 
   // Trạng thái Word template
   const [wordFileName, setWordFileName] = useState<string | null>('Mau_Giay_Moi_Hoi_Nghi_2026.docx');
@@ -134,10 +137,9 @@ export const App: React.FC = () => {
     }
   };
 
-  // Chèn tag vào template
+  // Chèn tag vào vị trí con trỏ hoặc thay thế chữ bôi đen
   const handleInsertTag = (tag: string) => {
-    const tagString = ` {{${tag}}} `;
-    setTemplateHtml(prev => prev + tagString);
+    editorRef.current?.insertTag(tag);
   };
 
   // In bản ghi hiện tại
@@ -177,7 +179,6 @@ export const App: React.FC = () => {
         alert(err.message || 'Lỗi khi xuất file docx.');
       }
     } else {
-      // Xuất file HTML Word-compatible nếu không có file buffer gốc
       const mergedHtml = renderMergedHtml(templateHtml, currentRow);
       const blob = new Blob([`
         <!DOCTYPE html>
@@ -236,7 +237,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5">
         {/* Loading overlay khi xuất ZIP */}
         {isExporting && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50">
@@ -252,7 +253,7 @@ export const App: React.FC = () => {
 
         {/* Tab Nội dung */}
         {activeTab === 'merge' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Bước 1: Nạp file Word & Excel */}
             <FileImportSection
               onWordUpload={handleWordUpload}
@@ -265,40 +266,59 @@ export const App: React.FC = () => {
               totalColumns={excelData.headers.length}
             />
 
-            {/* Bước 2: Toolbar chọn Sheet, Cột & Font */}
-            <DataMappingToolbar
+            {/* Bước 2: Thanh điều khiển Chọn Sheet & Cấu hình Font chữ */}
+            <TopFormatBar
               sheetNames={sheetNames}
               activeSheet={activeSheet}
               onSelectSheet={handleSelectSheet}
-              headers={excelData.headers}
-              sampleRow={currentRow}
-              onInsertTag={handleInsertTag}
               settings={settings}
               onUpdateSettings={handleUpdateSettings}
+              totalRecords={excelData.rows.length}
+              totalColumns={excelData.headers.length}
             />
 
-            {/* Bước 3: Vùng Soạn thảo & Xem trước A4 */}
-            <DocumentEditorPreview
-              templateHtml={templateHtml}
-              onUpdateTemplateHtml={setTemplateHtml}
-              currentRow={currentRow}
-              currentIndex={currentIndex}
-              totalRecords={excelData.rows.length}
-              onPrevRecord={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
-              onNextRecord={() => setCurrentIndex(prev => Math.min(excelData.rows.length - 1, prev + 1))}
-              onFirstRecord={() => setCurrentIndex(0)}
-              onLastRecord={() => setCurrentIndex(excelData.rows.length - 1)}
-              onJumpToRecord={(idx) => setCurrentIndex(idx)}
-              settings={settings}
-              isPreviewMode={isPreviewMode}
-              setIsPreviewMode={setIsPreviewMode}
-              onPrintCurrent={handlePrintCurrent}
-              onPrintAll={handlePrintAll}
-              onExportDocxCurrent={handleExportDocxCurrent}
-              onExportZipAll={handleExportZipAll}
-              hasTemplate={Boolean(templateHtml)}
-              hasExcel={excelData.rows.length > 0}
-            />
+            {/* Bố cục 2 cột: Cột trái Word (cuộn độc lập) & Cột phải Cột Excel (cố định sticky) */}
+            <div className="flex flex-col lg:flex-row gap-5 items-start">
+              {/* Cột trái: Văn bản Word */}
+              <div className="flex-1 w-full min-w-0">
+                <DocumentEditorPreview
+                  ref={editorRef}
+                  templateHtml={templateHtml}
+                  onUpdateTemplateHtml={setTemplateHtml}
+                  currentRow={currentRow}
+                  currentIndex={currentIndex}
+                  totalRecords={excelData.rows.length}
+                  onPrevRecord={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                  onNextRecord={() => setCurrentIndex(prev => Math.min(excelData.rows.length - 1, prev + 1))}
+                  onFirstRecord={() => setCurrentIndex(0)}
+                  onLastRecord={() => setCurrentIndex(excelData.rows.length - 1)}
+                  onJumpToRecord={(idx) => setCurrentIndex(idx)}
+                  settings={settings}
+                  isPreviewMode={isPreviewMode}
+                  setIsPreviewMode={setIsPreviewMode}
+                  onPrintCurrent={handlePrintCurrent}
+                  onPrintAll={handlePrintAll}
+                  onExportDocxCurrent={handleExportDocxCurrent}
+                  onExportZipAll={handleExportZipAll}
+                  hasTemplate={Boolean(templateHtml)}
+                  hasExcel={excelData.rows.length > 0}
+                />
+              </div>
+
+              {/* Cột phải: Thanh Cột Excel khả dụng (Cố định vị trí sticky) */}
+              <div className="w-full lg:w-80 flex-shrink-0 lg:sticky lg:top-20">
+                <ExcelColumnsSidebar
+                  headers={excelData.headers}
+                  sampleRow={currentRow}
+                  currentIndex={currentIndex}
+                  totalRecords={excelData.rows.length}
+                  onPrevRecord={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                  onNextRecord={() => setCurrentIndex(prev => Math.min(excelData.rows.length - 1, prev + 1))}
+                  onInsertTag={handleInsertTag}
+                  activeSheet={activeSheet}
+                />
+              </div>
+            </div>
           </div>
         )}
 

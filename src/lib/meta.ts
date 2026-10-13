@@ -40,7 +40,7 @@ export const APP_META: AppMeta = {
   name: "NSN Word Mail Merge Web Pro",
   shortName: "Mail Merge Web",
   appCode: "MAILMERGE",
-  version: "1.0.0",
+  version: "1.0.1",
   date: "2026-10-13",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
@@ -48,6 +48,16 @@ export const APP_META: AppMeta = {
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.1",
+      date: "2026-10-13",
+      changes: [
+        "Chuyển bảng Cột Excel khả dụng sang thanh sidebar cố định bên phải (Sticky) để tiện lựa chọn và đối chiếu.",
+        "Cho phép cuộn nội dung văn bản Word bên trái độc lập mà không bị khuất danh sách cột.",
+        "Sửa lỗi chèn biến: Hỗ trợ chèn chuẩn xác vào vị trí con trỏ hoặc chèn đè thay thế phần văn bản đang bôi đen.",
+        "Tích hợp ô tìm kiếm tên cột và bộ đối chiếu dữ liệu mẫu trực tiếp trên sidebar bên phải."
+      ]
+    },
     {
       version: "1.0.0",
       date: "2026-10-13",

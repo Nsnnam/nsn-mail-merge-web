@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,12 +14,15 @@ import {
   AlignRight,
   AlignJustify,
   Printer,
-  FileDown,
-  Sparkles
+  FileDown
 } from 'lucide-react';
 import { DocumentSettings } from '../types';
 import { VIETNAMESE_FONTS } from '../lib/fonts';
 import { renderMergedHtml } from '../lib/docxHelper';
+
+export interface DocumentEditorHandle {
+  insertTag: (tag: string) => void;
+}
 
 interface DocumentEditorPreviewProps {
   templateHtml: string;
@@ -43,7 +46,7 @@ interface DocumentEditorPreviewProps {
   hasExcel: boolean;
 }
 
-export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
+export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEditorPreviewProps>(({
   templateHtml,
   onUpdateTemplateHtml,
   currentRow,
@@ -63,24 +66,129 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
   onExportZipAll,
   hasTemplate,
   hasExcel
-}) => {
+}, ref) => {
   const editorRef = useRef<HTMLDivElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const selectedFont = VIETNAMESE_FONTS.find(f => f.id === settings.fontId) || VIETNAMESE_FONTS[0];
 
-  // Đồng bộ nội dung vào editor khi chuyển chế độ hoặc sửa template
+  // Lưu lại vị trí con trỏ / vùng bôi đen (selection) mỗi khi người dùng thao tác trong editor
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && editorRef.current) {
+      const range = sel.getRangeAt(0);
+      if (editorRef.current.contains(range.commonAncestorContainer)) {
+        savedRangeRef.current = range.cloneRange();
+      }
+    }
+  };
+
   useEffect(() => {
-    if (editorRef.current) {
+    const handleDocSelectionChange = () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && editorRef.current) {
+        const range = sel.getRangeAt(0);
+        if (editorRef.current.contains(range.commonAncestorContainer)) {
+          savedRangeRef.current = range.cloneRange();
+        }
+      }
+    };
+
+    document.addEventListener('selectionchange', handleDocSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleDocSelectionChange);
+    };
+  }, []);
+
+  // Expose hàm insertTag cho component cha gọi khi click vào thẻ bên phải
+  useImperativeHandle(ref, () => ({
+    insertTag: (tag: string) => {
+      const el = editorRef.current;
+      if (!el) return;
+
+      // Nếu đang ở chế độ xem trước, chuyển ngay về chế độ soạn thảo
       if (isPreviewMode) {
-        editorRef.current.innerHTML = renderMergedHtml(templateHtml, currentRow);
+        setIsPreviewMode(false);
+      }
+
+      el.focus();
+
+      const tagText = `{{${tag}}}`;
+      const sel = window.getSelection();
+      let range: Range | null = null;
+
+      // 1. Kiểm tra xem selection hiện tại trên window có nằm trong editor không
+      if (sel && sel.rangeCount > 0) {
+        const curRange = sel.getRangeAt(0);
+        if (el.contains(curRange.commonAncestorContainer)) {
+          range = curRange;
+        }
+      }
+
+      // 2. Nếu không, phục hồi từ savedRangeRef
+      if (!range && savedRangeRef.current && el.contains(savedRangeRef.current.commonAncestorContainer)) {
+        range = savedRangeRef.current;
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }
+
+      if (range && el.contains(range.commonAncestorContainer)) {
+        // Xóa nội dung đang bôi đen (nếu có bôi đen chữ)
+        range.deleteContents();
+
+        // Chèn thẻ biến mới vào đúng vị trí
+        const textNode = document.createTextNode(tagText);
+        range.insertNode(textNode);
+
+        // Đặt con trỏ ngay sau thẻ biến vừa chèn
+        const newRange = document.createRange();
+        newRange.setStartAfter(textNode);
+        newRange.setEndAfter(textNode);
+
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+        savedRangeRef.current = newRange;
+
+        // Cập nhật lại HTML trong state
+        onUpdateTemplateHtml(el.innerHTML);
       } else {
+        // Nếu con trỏ chưa từng click vào editor, chèn vào cuối văn bản
+        const textNode = document.createTextNode(` ${tagText} `);
+        el.appendChild(textNode);
+
+        const newRange = document.createRange();
+        newRange.selectNodeContents(el);
+        newRange.collapse(false);
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+        savedRangeRef.current = newRange;
+
+        onUpdateTemplateHtml(el.innerHTML);
+      }
+    }
+  }));
+
+  // Đồng bộ nội dung vào editor khi đổi chế độ hoặc đổi bản ghi (tránh ghi đè làm mất con trỏ)
+  useEffect(() => {
+    if (!editorRef.current) return;
+    if (isPreviewMode) {
+      editorRef.current.innerHTML = renderMergedHtml(templateHtml, currentRow);
+    } else {
+      if (editorRef.current.innerHTML !== templateHtml) {
         editorRef.current.innerHTML = templateHtml;
       }
     }
   }, [templateHtml, currentRow, isPreviewMode]);
 
-  // Xử lý sự kiện chỉnh sửa nội dung khi ở chế độ edit
+  // Xử lý sự kiện chỉnh sửa nội dung khi gõ trong editor
   const handleInput = () => {
     if (!isPreviewMode && editorRef.current) {
+      saveSelection();
       onUpdateTemplateHtml(editorRef.current.innerHTML);
     }
   };
@@ -89,6 +197,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
   const execFormat = (command: string, value: string | undefined = undefined) => {
     document.execCommand(command, false, value);
     if (editorRef.current && !isPreviewMode) {
+      saveSelection();
       onUpdateTemplateHtml(editorRef.current.innerHTML);
     }
   };
@@ -98,9 +207,9 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
   const lineHeightStyle = settings.preserveOriginalFormat ? 'inherit' : settings.lineHeight;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
       {/* Thanh điều khiển trên cùng (Toolbar) */}
-      <div className="bg-slate-50 border-b border-slate-200 p-3 sm:px-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-slate-50 border-b border-slate-200 p-3 sm:px-4 flex flex-wrap items-center justify-between gap-3">
         {/* Nhóm 1: Chuyển đổi Chế độ Chỉnh sửa / Xem trước */}
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-lg border border-slate-300 p-0.5 bg-white shadow-2xs">
@@ -130,9 +239,10 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
 
           {/* Công cụ định dạng Rich text (chỉ hiện khi đang ở chế độ Soạn thảo) */}
           {!isPreviewMode && (
-            <div className="hidden sm:flex items-center gap-1 pl-2 border-l border-slate-200">
+            <div className="hidden sm:flex items-center gap-0.5 pl-2 border-l border-slate-200">
               <button
                 onClick={() => execFormat('bold')}
+                onMouseDown={(e) => e.preventDefault()}
                 className="p-1.5 rounded hover:bg-slate-200 text-slate-700 font-bold"
                 title="In đậm (Ctrl+B)"
               >
@@ -140,6 +250,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
               </button>
               <button
                 onClick={() => execFormat('italic')}
+                onMouseDown={(e) => e.preventDefault()}
                 className="p-1.5 rounded hover:bg-slate-200 text-slate-700 italic"
                 title="In nghiêng (Ctrl+I)"
               >
@@ -147,6 +258,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
               </button>
               <button
                 onClick={() => execFormat('underline')}
+                onMouseDown={(e) => e.preventDefault()}
                 className="p-1.5 rounded hover:bg-slate-200 text-slate-700 underline"
                 title="Gạch chân (Ctrl+U)"
               >
@@ -155,6 +267,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
               <span className="w-px h-4 bg-slate-300 mx-1"></span>
               <button
                 onClick={() => execFormat('justifyLeft')}
+                onMouseDown={(e) => e.preventDefault()}
                 className="p-1.5 rounded hover:bg-slate-200 text-slate-700"
                 title="Canh trái"
               >
@@ -162,6 +275,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
               </button>
               <button
                 onClick={() => execFormat('justifyCenter')}
+                onMouseDown={(e) => e.preventDefault()}
                 className="p-1.5 rounded hover:bg-slate-200 text-slate-700"
                 title="Canh giữa"
               >
@@ -169,6 +283,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
               </button>
               <button
                 onClick={() => execFormat('justifyRight')}
+                onMouseDown={(e) => e.preventDefault()}
                 className="p-1.5 rounded hover:bg-slate-200 text-slate-700"
                 title="Canh phải"
               >
@@ -176,6 +291,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
               </button>
               <button
                 onClick={() => execFormat('justifyFull')}
+                onMouseDown={(e) => e.preventDefault()}
                 className="p-1.5 rounded hover:bg-slate-200 text-slate-700"
                 title="Căn đều hai bên"
               >
@@ -205,8 +321,8 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center gap-1 text-xs px-2 font-medium text-slate-700">
-              <span>Bản ghi</span>
+            <div className="flex items-center gap-1 text-xs px-1 font-medium text-slate-700">
+              <span className="hidden sm:inline">Bản ghi</span>
               <input
                 type="number"
                 min={1}
@@ -218,7 +334,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
                     onJumpToRecord(val - 1);
                   }
                 }}
-                className="w-12 text-center py-0.5 border border-slate-300 rounded font-bold text-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-11 text-center py-0.5 border border-slate-300 rounded font-bold text-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <span>/ <strong>{totalRecords}</strong></span>
             </div>
@@ -246,7 +362,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={onPrintCurrent}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-2xs"
             title="In hoặc Lưu thành PDF bản ghi hiện tại qua trình duyệt (Ctrl+P)"
           >
             <Printer className="w-3.5 h-3.5" />
@@ -256,7 +372,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
           {totalRecords > 1 && (
             <button
               onClick={onPrintAll}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors"
               title="In hàng loạt hoặc xuất toàn bộ tất cả bản ghi ra PDF"
             >
               <Printer className="w-3.5 h-3.5 text-indigo-600" />
@@ -266,7 +382,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
 
           <button
             onClick={onExportDocxCurrent}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors"
             title="Xuất bản ghi hiện tại ra file Word (.docx) giữ nguyên format gốc"
           >
             <FileDown className="w-3.5 h-3.5 text-slate-500" />
@@ -276,7 +392,7 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
           {totalRecords > 1 && (
             <button
               onClick={onExportZipAll}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors"
               title="Trộn tất cả các dòng và đóng gói toàn bộ vào file nén .ZIP"
             >
               <FileDown className="w-3.5 h-3.5 text-slate-500" />
@@ -286,42 +402,42 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
         </div>
       </div>
 
-      {/* Thông tin font đang áp dụng */}
+      {/* Thông tin font & chế độ hiển thị */}
       <div className="bg-slate-100/60 px-4 py-2 text-xs text-slate-600 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <span>Định dạng áp dụng:</span>
+          <span>Định dạng:</span>
           {settings.preserveOriginalFormat ? (
             <span className="font-semibold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">
-              Giữ nguyên font &amp; cỡ chữ ban đầu của file Word
+              Giữ nguyên font ban đầu của file Word
             </span>
           ) : (
             <span className="font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-              Font: {selectedFont.name} · Cỡ: {settings.fontSize} · Giãn dòng: {settings.lineHeight}
+              {selectedFont.name} · {settings.fontSize} · Giãn dòng {settings.lineHeight}
             </span>
           )}
         </div>
 
-        <div className="text-[11px] text-slate-500">
+        <div className="text-[11px]">
           {isPreviewMode ? (
             <span className="text-emerald-700 font-medium flex items-center gap-1">
-              <Eye className="w-3 h-3 text-emerald-600" /> Đang xem trước dữ liệu thực tế (Chế độ đọc)
+              <Eye className="w-3 h-3 text-emerald-600" /> Đang xem trước dữ liệu thực tế (Chỉ đọc)
             </span>
           ) : (
             <span className="text-blue-700 font-medium flex items-center gap-1">
-              <Edit3 className="w-3 h-3 text-blue-600" /> Đang ở chế độ chỉnh sửa (Click vào văn bản để sửa nội dung)
+              <Edit3 className="w-3 h-3 text-blue-600" /> Chế độ soạn thảo (Click/Bôi đen văn bản để chèn biến)
             </span>
           )}
         </div>
       </div>
 
-      {/* Vùng hiển thị trang giấy A4 mô phỏng chuẩn in */}
-      <div className="p-4 sm:p-8 bg-slate-200/60 overflow-x-auto flex justify-center min-h-[700px]">
+      {/* Vùng hiển thị trang giấy A4 mô phỏng chuẩn in (Cuộn độc lập) */}
+      <div className="p-4 sm:p-6 bg-slate-200/60 overflow-x-auto flex justify-center min-h-[700px]">
         <div
           className="print-page bg-white shadow-xl rounded-sm transition-all relative"
           style={{
             width: '210mm',
             minHeight: '297mm',
-            padding: '20mm 20mm 20mm 25mm', // Chuẩn lề văn bản hành chính Việt Nam (trên 20, dưới 20, phải 20, trái 25mm)
+            padding: '20mm 20mm 20mm 25mm', // Chuẩn lề văn bản hành chính Việt Nam (Nghị định 30)
             boxSizing: 'border-box'
           }}
         >
@@ -330,6 +446,9 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
             ref={editorRef}
             contentEditable={!isPreviewMode}
             onInput={handleInput}
+            onMouseUp={saveSelection}
+            onKeyUp={saveSelection}
+            onFocus={saveSelection}
             suppressContentEditableWarning
             className="document-content outline-none focus:ring-0 min-h-[800px]"
             style={{
@@ -343,4 +462,6 @@ export const DocumentEditorPreview: React.FC<DocumentEditorPreviewProps> = ({
       </div>
     </div>
   );
-};
+});
+
+DocumentEditorPreview.displayName = 'DocumentEditorPreview';
