@@ -40,7 +40,7 @@ export const APP_META: AppMeta = {
   name: "NSN Word Mail Merge Web Pro",
   shortName: "Mail Merge Web",
   appCode: "MAILMERGE",
-  version: "1.0.1",
+  version: "1.0.2",
   date: "2026-10-13",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
@@ -48,6 +48,17 @@ export const APP_META: AppMeta = {
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.2",
+      date: "2026-10-13",
+      changes: [
+        "Sửa lỗi in toàn trang web: Chuyển sang cơ chế in iframe cách ly và CSS @media print nghiêm ngặt, đảm bảo CHỈ in duy nhất trang văn bản A4.",
+        "Định dạng biến kế thừa 100% văn bản khi in: Xóa bỏ khung viền xanh khi in/xuất PDF, biến chèn vào kế thừa trọn vẹn màu sắc, in đậm/nghiêng của văn bản xung quanh.",
+        "Nâng cấp bộ công cụ soạn thảo chuyên nghiệp kiểu Microsoft Word: Thêm Undo/Redo, H1/H2/H3, Cỡ chữ, Bảng màu chữ, Màu nền, Gạch ngang, Danh sách, Tăng giảm thụt lề, Chèn bảng biểu 3x3, Chèn kẻ ngang, Xóa định dạng.",
+        "Thêm tính năng Xuất 1 file Word .DOCX gộp tất cả bản ghi: Tách từng trang bằng ngắt trang chuẩn OpenXML và giữ nguyên 100% định dạng bảng biểu, lề trang.",
+        "Nhúng sẵn file mẫu .docx chuẩn OpenXML vào ứng dụng: Đảm bảo xuất file Word chuẩn xác ngay cả khi không nạp file từ máy."
+      ]
+    },
     {
       version: "1.0.1",
       date: "2026-10-13",

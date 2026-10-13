@@ -5,6 +5,25 @@ Múi giờ áp dụng: **Asia/Ho_Chi_Minh (GMT+7)**.
 
 ---
 
+## [1.0.2] - 2026-10-13
+
+### Sửa lỗi & Nâng cấp (Fixed & Enhanced)
+- **Sửa triệt để lỗi in toàn trang web:** Áp dụng cơ chế in qua `iframe` cách ly và CSS `@media print` nghiêm ngặt, đảm bảo khi bấm "In bản ghi này" hoặc "In tất cả" máy in chỉ nhận duy nhất nội dung văn bản A4, loại bỏ 100% header, footer, nút bấm và nền xám của web.
+- **Kế thừa định dạng văn bản cho biến khi in:** Xóa bỏ hoàn toàn khung viền xanh và màu nền khi in ra giấy hoặc xuất PDF. Biến chèn vào kế thừa trọn vẹn màu sắc (đỏ, xanh, đen...), in đậm, in nghiêng, cỡ chữ tương ứng của vị trí văn bản.
+- **Nâng cấp thanh công cụ soạn thảo chuyên sâu:** Bổ sung đầy đủ tính năng soạn thảo văn bản kiểu Microsoft Word:
+  - Hoàn tác / Làm lại (Undo / Redo)
+  - Chọn kiểu đoạn: Đoạn văn (Normal), Tiêu đề 1 (H1), Tiêu đề 2 (H2), Tiêu đề 3 (H3)
+  - Cỡ chữ nhanh (11pt, 12pt, 13pt, 14pt chuẩn NĐ 30, 16pt, 18pt...)
+  - Bảng chọn màu chữ (Text Color) và màu nền đánh dấu (Highlight)
+  - Gạch ngang chữ (Strikethrough)
+  - Danh sách đầu dòng, Danh sách số, Tăng / Giảm lề dòng (Indent / Outdent)
+  - Chèn bảng biểu (Table 3x3) và đường kẻ phân cách ngang (`<hr>`)
+  - Nút Xóa định dạng (Clear formatting)
+- **Tính năng mới - Xuất 1 file Word .DOCX gộp toàn bộ:** Cho phép gộp tất cả các dòng dữ liệu thành một file Word `.docx` duy nhất, mỗi bản ghi được ngắt trang chuẩn xác bằng mã ngắt trang OpenXML (`<w:br w:type="page"/>`), giữ nguyên 100% định dạng bảng biểu và lề trang.
+- **Nhúng sẵn bản nhị phân mẫu .docx:** Tích hợp file mẫu OpenXML trực tiếp vào ứng dụng để luôn đảm bảo xuất Word chuẩn định dạng kể cả khi dùng mẫu mặc định.
+
+---
+
 ## [1.0.1] - 2026-10-13
 
 ### Thay đổi & Cải tiến (Changed & Fixed)
