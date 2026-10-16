@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
       {/* Thanh viền Gradient đa sắc tương ứng chủ đề đã chọn */}
       <div className={`h-1.5 w-full bg-gradient-to-r ${theme.gradientClass} transition-all`} />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1750px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & App Title */}
           <div className="flex items-center space-x-3 cursor-pointer select-none" onClick={() => setActiveTab('merge')}>

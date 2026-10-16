@@ -125,6 +125,107 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     settings.customMargins || { top: 20, bottom: 20, left: 30, right: 15 }
   );
 
+  // === HỆ THỐNG CUSTOM HISTORY STACK (UNDO / REDO) ĐỘC LẬP 100% ===
+  const historyStackRef = useRef<string[]>([]);
+  const historyIndexRef = useRef<number>(-1);
+  const isUndoRedoActionRef = useRef<boolean>(false);
+  const debounceTimerRef = useRef<any>(null);
+  const lastKnownHtmlRef = useRef<string>('');
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  // Ref cho Click Outside
+  const tableMenuRef = useRef<HTMLDivElement>(null);
+  const symbolsMenuRef = useRef<HTMLDivElement>(null);
+
+  const updateUndoRedoState = () => {
+    setCanUndo(historyIndexRef.current > 0);
+    setCanRedo(historyIndexRef.current < historyStackRef.current.length - 1);
+  };
+
+  const pushHistorySnapshot = (html: string) => {
+    if (isUndoRedoActionRef.current) return;
+    const currentStack = historyStackRef.current;
+    const currentIndex = historyIndexRef.current;
+
+    if (currentIndex >= 0 && currentStack[currentIndex] === html) {
+      return;
+    }
+
+    const newStack = currentStack.slice(0, currentIndex + 1);
+    newStack.push(html);
+
+    if (newStack.length > 60) {
+      newStack.shift();
+    }
+
+    historyStackRef.current = newStack;
+    historyIndexRef.current = newStack.length - 1;
+    updateUndoRedoState();
+  };
+
+  const commitHtmlChange = (newHtml: string, immediate: boolean = true) => {
+    lastKnownHtmlRef.current = newHtml;
+    onUpdateTemplateHtml(newHtml);
+
+    if (immediate) {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      pushHistorySnapshot(newHtml);
+    } else {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        pushHistorySnapshot(newHtml);
+      }, 350);
+    }
+  };
+
+  const handleUndo = () => {
+    if (historyIndexRef.current <= 0 || !editorRef.current || isPreviewMode) return;
+    isUndoRedoActionRef.current = true;
+    historyIndexRef.current--;
+    const prevHtml = historyStackRef.current[historyIndexRef.current];
+    editorRef.current.innerHTML = prevHtml;
+    lastKnownHtmlRef.current = prevHtml;
+    onUpdateTemplateHtml(prevHtml);
+    updateUndoRedoState();
+
+    setTimeout(() => {
+      isUndoRedoActionRef.current = false;
+    }, 50);
+  };
+
+  const handleRedo = () => {
+    if (historyIndexRef.current >= historyStackRef.current.length - 1 || !editorRef.current || isPreviewMode) return;
+    isUndoRedoActionRef.current = true;
+    historyIndexRef.current++;
+    const nextHtml = historyStackRef.current[historyIndexRef.current];
+    editorRef.current.innerHTML = nextHtml;
+    lastKnownHtmlRef.current = nextHtml;
+    onUpdateTemplateHtml(nextHtml);
+    updateUndoRedoState();
+
+    setTimeout(() => {
+      isUndoRedoActionRef.current = false;
+    }, 50);
+  };
+
+  // Đóng Table Menu và Symbols Menu khi click chuột ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (isTableMenuOpen && tableMenuRef.current && !tableMenuRef.current.contains(target)) {
+        setIsTableMenuOpen(false);
+      }
+      if (isSymbolsOpen && symbolsMenuRef.current && !symbolsMenuRef.current.contains(target)) {
+        setIsSymbolsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isTableMenuOpen, isSymbolsOpen]);
+
   const effectiveMargin = getEffectiveMargin(settings);
 
   const handleMarginChange = (val: PageMarginType) => {
@@ -218,7 +319,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
         }
         savedRangeRef.current = newRange;
 
-        onUpdateTemplateHtml(el.innerHTML);
+        commitHtmlChange(el.innerHTML, true);
       } else {
         const textNode = document.createTextNode(` ${tagText} `);
         el.appendChild(textNode);
@@ -232,7 +333,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
         }
         savedRangeRef.current = newRange;
 
-        onUpdateTemplateHtml(el.innerHTML);
+        commitHtmlChange(el.innerHTML, true);
       }
     }
   }));
@@ -245,6 +346,12 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     } else {
       if (editorRef.current.innerHTML !== templateHtml) {
         editorRef.current.innerHTML = templateHtml;
+        lastKnownHtmlRef.current = templateHtml;
+        if (historyStackRef.current.length === 0 || !isUndoRedoActionRef.current) {
+          historyStackRef.current = [templateHtml];
+          historyIndexRef.current = 0;
+          updateUndoRedoState();
+        }
       }
     }
   }, [templateHtml, currentRow, isPreviewMode]);
@@ -253,7 +360,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
   const handleInput = () => {
     if (!isPreviewMode && editorRef.current) {
       saveSelection();
-      onUpdateTemplateHtml(editorRef.current.innerHTML);
+      commitHtmlChange(editorRef.current.innerHTML, false);
     }
   };
 
@@ -262,7 +369,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     document.execCommand(command, false, value);
     if (editorRef.current && !isPreviewMode) {
       saveSelection();
-      onUpdateTemplateHtml(editorRef.current.innerHTML);
+      commitHtmlChange(editorRef.current.innerHTML, true);
     }
   };
 
@@ -290,7 +397,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
       newRange.selectNodeContents(span);
       sel.addRange(newRange);
       savedRangeRef.current = newRange;
-      onUpdateTemplateHtml(editorRef.current.innerHTML);
+      commitHtmlChange(editorRef.current.innerHTML, true);
     } catch (e) {
       console.warn('Lỗi áp dụng style inline:', e);
     }
@@ -302,12 +409,29 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     document.execCommand('insertHTML', false, tabHtml);
     if (editorRef.current && !isPreviewMode) {
       saveSelection();
-      onUpdateTemplateHtml(editorRef.current.innerHTML);
+      commitHtmlChange(editorRef.current.innerHTML, true);
     }
   };
 
-  // Bắt phím Tab trong editor để không bị nhảy focus ra ngoài trang web
+  // Bắt phím Tab và phím tắt Undo (Ctrl+Z) / Redo (Ctrl+Y / Ctrl+Shift+Z)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'z' || e.key === 'Z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+        return;
+      }
+      if (e.key === 'y' || e.key === 'Y') {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+    }
+
     if (e.key === 'Tab') {
       e.preventDefault();
       insertTabSpacer();
@@ -319,7 +443,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     document.execCommand('insertText', false, sym);
     if (editorRef.current && !isPreviewMode) {
       saveSelection();
-      onUpdateTemplateHtml(editorRef.current.innerHTML);
+      commitHtmlChange(editorRef.current.innerHTML, true);
     }
     setIsSymbolsOpen(false);
   };
@@ -355,7 +479,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     tableHtml += '</tbody></table><p><br></p>';
     document.execCommand('insertHTML', false, tableHtml);
     if (editorRef.current && !isPreviewMode) {
-      onUpdateTemplateHtml(editorRef.current.innerHTML);
+      commitHtmlChange(editorRef.current.innerHTML, true);
     }
   };
 
@@ -375,7 +499,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
       newCell.style.verticalAlign = 'middle';
       newCell.innerHTML = '<p>&nbsp;</p>';
     }
-    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
   };
 
   const handleInsertRowBelow = () => {
@@ -394,7 +518,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
       newCell.style.verticalAlign = 'middle';
       newCell.innerHTML = '<p>&nbsp;</p>';
     }
-    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
   };
 
   const handleDeleteRow = () => {
@@ -409,7 +533,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     } else {
       table.deleteRow(row.rowIndex);
     }
-    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
   };
 
   const handleInsertColLeft = () => {
@@ -427,7 +551,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
       newCell.style.verticalAlign = 'middle';
       newCell.innerHTML = '<p>&nbsp;</p>';
     });
-    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
   };
 
   const handleInsertColRight = () => {
@@ -445,7 +569,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
       newCell.style.verticalAlign = 'middle';
       newCell.innerHTML = '<p>&nbsp;</p>';
     });
-    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
   };
 
   const handleDeleteCol = () => {
@@ -465,7 +589,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
         }
       });
     }
-    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
   };
 
   const handleDeleteTable = () => {
@@ -476,7 +600,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     }
     if (window.confirm('Bạn có chắc muốn xóa toàn bộ bảng này không?')) {
       found.table.remove();
-      if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+      if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
     }
   };
 
@@ -490,7 +614,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     found.cell.querySelectorAll('p, div, span').forEach(el => {
       (el as HTMLElement).style.textAlign = align;
     });
-    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
   };
 
   const handleValignCell = (valign: 'top' | 'middle' | 'bottom') => {
@@ -500,7 +624,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
       return;
     }
     found.cell.style.verticalAlign = valign;
-    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
   };
 
   const handleCellBgColorChange = (color: string) => {
@@ -508,7 +632,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     const found = getClosestCellAndTable();
     if (found) {
       found.cell.style.backgroundColor = color;
-      if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+      if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
     }
   };
 
@@ -523,7 +647,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     found.table.querySelectorAll('td, th').forEach(c => {
       (c as HTMLElement).style.border = borderStyle;
     });
-    if (editorRef.current) onUpdateTemplateHtml(editorRef.current.innerHTML);
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
   };
 
   const fontFamilyStyle = settings.preserveOriginalFormat ? 'inherit' : selectedFont.family;
@@ -694,23 +818,35 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
       {/* THANH CÔNG CỤ SOẠN THẢO WYSIWYG TOÀN DIỆN KIỂU MICROSOFT WORD */}
       {!isPreviewMode && (
         <div className="bg-white border-b border-slate-200 p-2 sm:px-4 flex flex-wrap items-center gap-1 text-xs text-slate-700 shadow-2xs">
-          {/* Lịch sử */}
-          <button
-            onClick={() => execFormat('undo')}
-            onMouseDown={(e) => e.preventDefault()}
-            className="p-1.5 rounded hover:bg-slate-100 text-slate-600"
-            title="Hoàn tác (Ctrl+Z)"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => execFormat('redo')}
-            onMouseDown={(e) => e.preventDefault()}
-            className="p-1.5 rounded hover:bg-slate-100 text-slate-600"
-            title="Làm lại (Ctrl+Y)"
-          >
-            <RotateCw className="w-3.5 h-3.5" />
-          </button>
+          {/* Lịch sử Undo / Redo */}
+          <div className="flex items-center gap-0.5 bg-slate-50 border border-slate-200 rounded p-0.5">
+            <button
+              onClick={handleUndo}
+              onMouseDown={(e) => e.preventDefault()}
+              disabled={!canUndo}
+              className={`p-1.5 rounded transition-all ${
+                canUndo
+                  ? 'hover:bg-slate-200 text-slate-800 cursor-pointer active:scale-95'
+                  : 'text-slate-300 cursor-not-allowed'
+              }`}
+              title={canUndo ? "Hoàn tác (Ctrl+Z)" : "Không có thao tác để hoàn tác"}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleRedo}
+              onMouseDown={(e) => e.preventDefault()}
+              disabled={!canRedo}
+              className={`p-1.5 rounded transition-all ${
+                canRedo
+                  ? 'hover:bg-slate-200 text-slate-800 cursor-pointer active:scale-95'
+                  : 'text-slate-300 cursor-not-allowed'
+              }`}
+              title={canRedo ? "Làm lại (Ctrl+Y / Ctrl+Shift+Z)" : "Không có thao tác để làm lại"}
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
           <span className="w-px h-4 bg-slate-200 mx-1"></span>
 
@@ -970,11 +1106,13 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
           </button>
 
           {/* Chèn Ký tự đặc biệt / Ô kiểm */}
-          <div className="relative">
+          <div className="relative" ref={symbolsMenuRef}>
             <button
               onClick={() => setIsSymbolsOpen(!isSymbolsOpen)}
               onMouseDown={(e) => e.preventDefault()}
-              className="px-2 py-1 rounded hover:bg-slate-100 text-slate-700 border border-slate-200 bg-slate-50 font-medium flex items-center gap-1"
+              className={`px-2 py-1 rounded hover:bg-slate-100 text-slate-700 border border-slate-200 bg-slate-50 font-medium flex items-center gap-1 transition-all ${
+                isSymbolsOpen ? 'ring-2 ring-blue-400 bg-blue-50 text-blue-700' : ''
+              }`}
               title="Chèn ký tự đặc biệt, dấu tích, ô vuông..."
             >
               <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
@@ -982,7 +1120,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             </button>
 
             {isSymbolsOpen && (
-              <div className="absolute left-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-xl p-2 w-56 grid grid-cols-7 gap-1">
+              <div className="absolute left-0 top-full mt-1.5 z-50 bg-white border border-slate-300 rounded-xl shadow-2xl p-2 w-56 max-w-[calc(100vw-2rem)] grid grid-cols-7 gap-1 animate-in fade-in zoom-in-95 duration-100">
                 {SPECIAL_SYMBOLS.map(sym => (
                   <button
                     key={sym}
@@ -999,13 +1137,13 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
           <span className="w-px h-4 bg-slate-200 mx-1"></span>
 
           {/* BỘ CÔNG CỤ BẢNG BIỂU (TABLE SUITE) */}
-          <div className="relative">
+          <div className="relative" ref={tableMenuRef}>
             <button
               onClick={() => setIsTableMenuOpen(!isTableMenuOpen)}
               onMouseDown={(e) => e.preventDefault()}
-              className={`px-2 py-1 rounded border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs ${
+              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs ${
                 isTableMenuOpen
-                  ? 'bg-blue-600 text-white border-blue-600'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-300'
                   : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200'
               }`}
               title="Bộ công cụ cấu hình và sắp xếp nội dung bảng biểu đầy đủ"
@@ -1015,14 +1153,15 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             </button>
 
             {isTableMenuOpen && (
-              <div className="absolute left-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-2xl p-3 w-80 space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+              <div className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-slate-300 rounded-2xl shadow-2xl p-3.5 w-84 sm:w-96 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-200px)] min-h-[300px] overflow-y-auto space-y-3 animate-in fade-in zoom-in-95 duration-100 overscroll-contain">
+                <div className="sticky -top-3.5 -mt-3.5 -mx-3.5 p-3.5 bg-white/95 backdrop-blur-xs border-b border-slate-200 flex items-center justify-between z-10 shadow-2xs">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <TableIcon className="w-4 h-4 text-blue-600" /> Cấu hình &amp; Định dạng Bảng
                   </span>
                   <button
                     onClick={() => setIsTableMenuOpen(false)}
-                    className="text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    className="w-6 h-6 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 text-xs font-bold transition-colors"
+                    title="Đóng menu bảng"
                   >
                     ✕
                   </button>
@@ -1031,22 +1170,22 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                 {/* 1. Thêm bảng mới */}
                 <div>
                   <span className="text-[11px] font-semibold text-slate-600 block mb-1">Tạo bảng mới:</span>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => { insertTable(3, 3); setIsTableMenuOpen(false); }}
-                      className="px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded text-xs font-medium border border-slate-200"
+                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium border border-slate-200"
                     >
                       Bảng 3x3
                     </button>
                     <button
                       onClick={() => { insertTable(4, 5); setIsTableMenuOpen(false); }}
-                      className="px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded text-xs font-medium border border-slate-200"
+                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium border border-slate-200"
                     >
                       Bảng 4x5
                     </button>
                     <button
                       onClick={() => { setIsCustomTableModalOpen(true); setIsTableMenuOpen(false); }}
-                      className="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-xs font-semibold border border-blue-200 ml-auto"
+                      className="px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold border border-blue-200 ml-auto"
                     >
                       Tùy chọn...
                     </button>
@@ -1054,28 +1193,28 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                 </div>
 
                 {/* 2. Thao tác dòng (Row) */}
-                <div className="border-t border-slate-100 pt-2">
+                <div className="border-t border-slate-100 pt-2.5">
                   <span className="text-[11px] font-semibold text-slate-600 block mb-1 flex items-center gap-1">
                     <Rows className="w-3.5 h-3.5 text-slate-500" /> Thao tác dòng:
                   </span>
-                  <div className="grid grid-cols-3 gap-1">
+                  <div className="grid grid-cols-3 gap-1.5">
                     <button
                       onClick={handleInsertRowAbove}
-                      className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200"
+                      className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
                       title="Thêm 1 dòng nằm ngay phía trên ô đang chọn"
                     >
                       + Dòng trên
                     </button>
                     <button
                       onClick={handleInsertRowBelow}
-                      className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200"
+                      className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
                       title="Thêm 1 dòng nằm ngay phía dưới ô đang chọn"
                     >
                       + Dòng dưới
                     </button>
                     <button
                       onClick={handleDeleteRow}
-                      className="p-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded text-[11px] font-medium border border-rose-200"
+                      className="p-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-[11px] font-semibold border border-rose-200 text-center"
                       title="Xóa dòng đang chọn"
                     >
                       Xóa dòng
@@ -1084,28 +1223,28 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                 </div>
 
                 {/* 3. Thao tác cột (Column) */}
-                <div className="border-t border-slate-100 pt-2">
+                <div className="border-t border-slate-100 pt-2.5">
                   <span className="text-[11px] font-semibold text-slate-600 block mb-1 flex items-center gap-1">
                     <Columns className="w-3.5 h-3.5 text-slate-500" /> Thao tác cột:
                   </span>
-                  <div className="grid grid-cols-3 gap-1">
+                  <div className="grid grid-cols-3 gap-1.5">
                     <button
                       onClick={handleInsertColLeft}
-                      className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200"
+                      className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
                       title="Thêm 1 cột bên trái ô đang chọn"
                     >
                       + Cột trái
                     </button>
                     <button
                       onClick={handleInsertColRight}
-                      className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200"
+                      className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
                       title="Thêm 1 cột bên phải ô đang chọn"
                     >
                       + Cột phải
                     </button>
                     <button
                       onClick={handleDeleteCol}
-                      className="p-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded text-[11px] font-medium border border-rose-200"
+                      className="p-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-[11px] font-semibold border border-rose-200 text-center"
                       title="Xóa cột đang chọn"
                     >
                       Xóa cột
@@ -1113,34 +1252,34 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                   </div>
                 </div>
 
-                {/* 4. Căn lề nội dung trong ô */}
-                <div className="border-t border-slate-100 pt-2">
-                  <span className="text-[11px] font-semibold text-slate-600 block mb-1">Căn lề ô hiện tại:</span>
-                  <div className="flex items-center gap-1">
+                {/* 4. Căn lề ngang nội dung trong ô */}
+                <div className="border-t border-slate-100 pt-2.5">
+                  <span className="text-[11px] font-semibold text-slate-600 block mb-1">Căn lề ngang ô hiện tại:</span>
+                  <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleAlignCell('left')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center"
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
                       title="Canh trái ô"
                     >
                       Trái
                     </button>
                     <button
                       onClick={() => handleAlignCell('center')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center font-bold"
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center font-bold"
                       title="Canh giữa ô"
                     >
                       Giữa
                     </button>
                     <button
                       onClick={() => handleAlignCell('right')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center"
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
                       title="Canh phải ô"
                     >
                       Phải
                     </button>
                     <button
                       onClick={() => handleAlignCell('justify')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center"
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
                       title="Đều 2 bên"
                     >
                       Đều
@@ -1149,26 +1288,26 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                 </div>
 
                 {/* 5. Căn lề dọc trong ô */}
-                <div className="border-t border-slate-100 pt-2">
+                <div className="border-t border-slate-100 pt-2.5">
                   <span className="text-[11px] font-semibold text-slate-600 block mb-1">Căn lề dọc ô:</span>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleValignCell('top')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center"
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
                       title="Căn đỉnh ô"
                     >
                       Đỉnh (Top)
                     </button>
                     <button
                       onClick={() => handleValignCell('middle')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center font-bold"
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center font-bold"
                       title="Căn giữa dọc"
                     >
                       Giữa (Middle)
                     </button>
                     <button
                       onClick={() => handleValignCell('bottom')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center"
+                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
                       title="Căn đáy ô"
                     >
                       Đáy (Bottom)
@@ -1177,29 +1316,29 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                 </div>
 
                 {/* 6. Màu nền ô & Viền bảng */}
-                <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
+                <div className="border-t border-slate-100 pt-2.5 flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-semibold text-slate-600">Nền ô:</span>
                     <input
                       type="color"
                       value={cellBgColor}
                       onChange={(e) => handleCellBgColorChange(e.target.value)}
-                      className="w-5 h-5 rounded cursor-pointer border border-slate-200 p-0"
+                      className="w-6 h-6 rounded cursor-pointer border border-slate-200 p-0"
                       title="Chọn màu nền ô đang chọn"
                     />
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleSetTableBorders('solid')}
-                      className="px-2 py-0.5 bg-slate-50 hover:bg-slate-100 rounded text-[10px] font-semibold border border-slate-200"
+                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-semibold border border-slate-200"
                       title="Viền nét liền chuẩn 1px"
                     >
                       Viền nét liền
                     </button>
                     <button
                       onClick={() => handleSetTableBorders('none')}
-                      className="px-2 py-0.5 bg-slate-50 hover:bg-slate-100 rounded text-[10px] border border-slate-200"
+                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200"
                       title="Ẩn đường viền bảng"
                     >
                       Bỏ viền
@@ -1208,10 +1347,10 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                 </div>
 
                 {/* 7. Xóa toàn bộ bảng */}
-                <div className="border-t border-slate-100 pt-2 text-right">
+                <div className="border-t border-slate-100 pt-2.5 flex justify-end">
                   <button
                     onClick={handleDeleteTable}
-                    className="px-3 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded text-xs font-semibold border border-rose-200 inline-flex items-center gap-1"
+                    className="w-full justify-center px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-xs font-semibold border border-rose-200 inline-flex items-center gap-1.5 transition-colors shadow-2xs"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Xóa toàn bộ bảng này</span>

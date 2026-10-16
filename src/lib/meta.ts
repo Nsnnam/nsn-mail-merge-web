@@ -42,14 +42,23 @@ export const APP_META: AppMeta = {
   shortName: "Merge Word",
   description: "Chỉnh sửa và trộn thư",
   appCode: "NAMNSMERGE",
-  version: "1.0.6",
-  date: "2026-10-13",
+  version: "1.0.7",
+  date: "2026-10-16",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
   role: "Tác giả · Tiện ích HIS / Excel / Tự động hóa văn bản",
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.7",
+      date: "2026-10-16",
+      changes: [
+        "Sửa triệt để chức năng Hoàn tác / Làm lại (Undo / Redo): Xây dựng Custom History Stack độc lập quản lý lịch sử thao tác văn bản, phím tắt Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z và nút bấm trên thanh công cụ hoạt động mượt mà.",
+        "Sửa lỗi menu Công cụ Bảng: Căn lề thông minh vào trong (right-0), cố định header, thêm thanh cuộn độc lập (max-h với overscroll-contain) và hỗ trợ click-outside tự đóng, đảm bảo hiển thị 100% các tính năng Nền ô, Bỏ viền, Xóa bảng không bị cắt đáy hoặc che khuất.",
+        "Tối ưu giao diện giãn toàn diện theo kích thước thiết bị: Nâng cấp container lên max-w-[1750px], loại bỏ khoảng trống lãng phí trên màn hình Desktop/Full HD/2K/4K, thanh Cột Excel co giãn hài hòa (w-80 xl:w-[340px]) không bị ẩn, chèn, hay đè lên nhau."
+      ]
+    },
     {
       version: "1.0.6",
       date: "2026-10-13",

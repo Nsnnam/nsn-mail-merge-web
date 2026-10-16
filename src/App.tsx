@@ -521,8 +521,8 @@ export const App: React.FC = () => {
         onOpenThemeModal={() => setIsThemeModalOpen(true)}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 space-y-3.5">
+      {/* Main Content Area - Giãn tối đa theo kích thước thiết bị */}
+      <main className="flex-1 max-w-[1750px] w-full mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 space-y-3.5">
         {/* Loading overlay khi xuất ZIP hoặc gộp DOCX */}
         {isExporting && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50">
@@ -626,7 +626,7 @@ export const App: React.FC = () => {
               </div>
 
               {/* Cột phải: Thanh Cột Excel khả dụng (Cố định vị trí sticky) */}
-              <div className="w-full lg:w-80 flex-shrink-0 lg:sticky lg:top-20">
+              <div className="w-full lg:w-80 xl:w-[340px] flex-shrink-0 lg:sticky lg:top-20">
                 <ExcelColumnsSidebar
                   headers={excelData.headers}
                   sampleRow={currentRow}

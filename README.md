@@ -5,7 +5,7 @@
 > Tuân thủ chuẩn **NSN App Standard** · Offline 100% Client-Side trong bộ nhớ trình duyệt.
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Online-blue?style=flat-square&logo=github)](https://Nsnnam.github.io/nsn-mail-merge-web/)
-[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.6-emerald?style=flat-square)](CHANGELOG.md)
+[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.7-emerald?style=flat-square)](CHANGELOG.md)
 [![Tác giả](https://img.shields.io/badge/Tác_giả-Nguyễn_Sơn_Nam-indigo?style=flat-square)](AUTHORS.md)
 [![Ủng hộ](https://img.shields.io/badge/Mời_cà_phê-BIDV_8855989777-amber?style=flat-square)](SUPPORT.md)
 
@@ -21,6 +21,7 @@
    - **Font mặc định Times New Roman**: Mặc định áp dụng Times New Roman khi nạp file Word tải lên.
    - **Cỡ chữ theo mẫu & Đa dạng tùy chọn**: Tự động nhận diện cỡ chữ của tài liệu mẫu, hỗ trợ chuyển đổi linh hoạt từ 8pt đến 36pt.
 2. **Giao diện hiện đại & Tối ưu không gian làm việc**:
+   - **Giãn tối đa theo kích thước thiết bị**: Container mở rộng tới `max-w-[1750px]`, tận dụng toàn bộ bề ngang màn hình máy tính Full HD/2K/4K, không bị bó hẹp hay để lãng phí khoảng trống 2 bên.
    - **Mặc định Chế độ Soạn thảo (Edit Mode)**: Khi import hoặc nạp tệp, trang web lập tức mở chế độ soạn thảo giúp người dùng thao tác định dạng và chèn biến ngay mà không cần thêm thao tác chuyển đổi.
    - **Mặc định hiển thị bảng nạp tệp**: Khi khởi tạo trang web, bảng nạp tệp hiển thị rõ ràng, thân thiện; sau khi người dùng nạp file Word và Excel, bảng sẽ tự động thu gọn để tối ưu hóa diện tích làm việc.
    - **Nạp nhiều file cùng lúc & Xóa hàng loạt**: Cho phép kéo thả hoặc chọn nhiều file Word (.docx) và nhiều file Excel (.xlsx) cùng lúc, kèm bảng quản lý tệp, chuyển đổi nhanh giữa các mẫu và xóa hàng loạt (Bulk Delete).
@@ -34,10 +35,11 @@
    - Tự động nhận diện và chuyển hóa các trường trộn bản địa của Microsoft Word (`MERGEFIELD`) sang cú pháp thẻ `{{Tên_Cột}}`.
    - Mặc định kích hoạt chế độ **"Giữ nguyên định dạng ban đầu của file Word gốc"**.
 4. **Bộ công cụ Soạn thảo WYSIWYG & Table Suite toàn diện**:
-   - **Bộ công cụ Bảng biểu (Table Suite)**: Thêm/xóa dòng phía trên/dưới, thêm/xóa cột bên trái/phải, xóa bảng, căn lề ô (trái/giữa/phải/đều), căn dọc ô (đỉnh/giữa/đáy), đổi màu nền ô, cấu hình viền bảng (nét liền/bỏ viền) và tạo bảng tùy biến kích thước hàng x cột.
+   - **Hệ thống Hoàn tác / Làm lại (Undo / Redo) chuyên dụng**: Quản lý lịch sử thay đổi HTML bằng Custom History Stack độc lập, bắt trọn phím tắt `Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+Z` và nút bấm trực quan.
+   - **Bộ công cụ Bảng biểu (Table Suite) chống tràn**: Căn lề thông minh vào trong, thanh cuộn độc lập chống cắt đáy, tích hợp thêm/xóa dòng trên/dưới, thêm/xóa cột trái/phải, xóa bảng, căn lề ô (trái/giữa/phải/đều), căn dọc ô (đỉnh/giữa/đáy), đổi màu nền ô, viền nét liền/bỏ viền và tạo bảng tùy biến kích thước hàng x cột.
    - **Hỗ trợ phím Tab trực tiếp**: Nhấn phím Tab trong trình soạn thảo để nhảy thụt dòng chuẩn xác.
    - **Ký tự đặc biệt & Ô kiểm**: Chèn nhanh dấu tích (✓, ✔), ô vuông kiểm tra (☐, ☑), mũi tên, dấu sao, bullet.
-   - Undo/Redo, H1/H2/H3/Normal, cỡ chữ (8pt - 36pt), giãn dòng (1.0 - 2.0), bảng chọn màu chữ & màu highlight, in đậm, in nghiêng, gạch chân, gạch ngang, chỉ số trên/dưới ($X^2$, $X_2$), căn lề 4 hướng, danh sách, thụt lề, kẻ ngang, xóa định dạng.
+   - Cỡ chữ (8pt - 36pt), giãn dòng (1.0 - 2.0), bảng chọn màu chữ & màu highlight, in đậm, in nghiêng, gạch chân, gạch ngang, chỉ số trên/dưới ($X^2$, $X_2$), căn lề 4 hướng, danh sách, thụt lề, kẻ ngang, xóa định dạng.
 5. **Kho mẫu văn bản & Sao lưu / Phục hồi (.JSON)**:
    - Lưu trữ các mẫu văn bản đã chỉnh sửa vào `localStorage` trình duyệt.
    - Xuất/Tải file sao lưu `.JSON` về máy tính cá nhân để lưu trữ lâu dài.

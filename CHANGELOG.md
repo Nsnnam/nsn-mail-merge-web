@@ -3,6 +3,22 @@
 Tất cả thay đổi đáng chú ý của dự án **Namns Merge Word** được ghi lại tại đây theo chuẩn [Keep a Changelog](https://keepachangelog.com/) và [Semantic Versioning](https://semver.org/).  
 Múi giờ áp dụng: **Asia/Ho_Chi_Minh (GMT+7)**.
 
+## [1.0.7] - 2026-10-16
+
+### Sửa lỗi & Nâng cấp (Fixed & Enhanced)
+- **Sửa triệt để chức năng Hoàn tác / Làm lại (Undo / Redo):**
+  - Xây dựng **Custom History Stack Manager** độc lập quản lý lịch sử trạng thái HTML trong bộ nhớ RAM, khắc phục lỗi `document.execCommand('undo')` bị trình duyệt vô hiệu hóa khi thao tác trực tiếp trên DOM.
+  - Hỗ trợ lưu trữ đến 50 snapshot lịch sử với cơ chế tự động ghi nhớ (Debounce 350ms khi gõ phím và tức thì với các thao tác định dạng, bảng biểu, chèn biến, đổi lề, căn chỉnh).
+  - Phím tắt `Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+Z` và hai nút bấm trên thanh công cụ phản hồi mượt mà, tự động cập nhật trạng thái khả dụng (disabled khi không có thao tác).
+- **Sửa lỗi menu Công cụ Bảng (Table Suite Dropdown Overflow):**
+  - Định vị menu thông minh theo hướng vào trong (`right-0`), loại bỏ tình trạng tràn sang phải đè lên sidebar "Cột Excel khả dụng".
+  - Giới hạn chiều cao với thanh cuộn độc lập (`max-h-[calc(100vh-200px)] overflow-y-auto overscroll-contain`), ghim cố định tiêu đề (`sticky header`), giúp người dùng tiếp cận 100% các tính năng phía dưới (Nền ô, Viền nét liền, Bỏ viền, Xóa toàn bộ bảng) trên mọi kích thước màn hình mà không bao giờ bị cắt đáy.
+  - Tích hợp sự kiện tự động đóng khi nhấp chuột ra ngoài (`click-outside`).
+- **Tối ưu giao diện giãn toàn diện theo kích thước thiết bị:**
+  - Nâng cấp giới hạn container từ `max-w-7xl` (1280px) lên `max-w-[1750px]`, tận dụng tối đa chiều rộng màn hình Desktop, Full HD (1920x1080), 2K, 4K, loại bỏ hai dải khoảng trắng lãng phí bên lề.
+  - Mở rộng độ rộng thanh "Cột Excel khả dụng" linh hoạt (`w-full lg:w-80 xl:w-[340px]`), giúp các nút bấm và nhãn cột hiển thị rõ ràng, không bị co ép, chèn đè hoặc ẩn mất tính năng.
+  - Bổ sung `max-w-[calc(100vw-2rem)]` cho các menu con, bảo vệ trải nghiệm trên màn hình di động và tablet hẹp.
+
 ---
 
 ## [1.0.6] - 2026-10-13

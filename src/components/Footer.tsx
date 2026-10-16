@@ -9,7 +9,7 @@ interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ onOpenTab }) => {
   return (
     <footer className="mt-12 border-t border-slate-200 bg-white py-6 text-xs text-slate-500">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="max-w-[1750px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <strong className="text-slate-800">{APP_META.name}</strong>
           {' · '}v<span>{APP_META.version}</span>
