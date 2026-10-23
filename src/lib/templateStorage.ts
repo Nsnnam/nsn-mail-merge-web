@@ -1,4 +1,16 @@
 import { saveAs } from 'file-saver';
+import { DocumentMargin, PageMarginType } from '../types';
+
+export interface SavedTemplateSettings {
+  fontId?: string;
+  fontSize?: string;
+  lineHeight?: string;
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  preserveOriginalFormat?: boolean;
+  pageMargin?: PageMarginType;
+  customMargins?: DocumentMargin;
+  originalMargins?: DocumentMargin;
+}
 
 export interface SavedTemplateItem {
   id: string;
@@ -8,6 +20,7 @@ export interface SavedTemplateItem {
   updatedAt: string;
   description?: string;
   previewSnippet?: string;
+  settings?: SavedTemplateSettings;
 }
 
 const STORAGE_KEY = 'namns_merge_saved_templates_v1';
@@ -42,13 +55,14 @@ export function persistTemplates(templates: SavedTemplateItem[]): void {
 }
 
 /**
- * Lưu mẫu mới hoặc cập nhật mẫu đã có
+ * Lưu mẫu mới hoặc cập nhật mẫu đã có (kèm cấu hình lề và font)
  */
 export function saveTemplate(
   name: string,
   html: string,
   tags: string[],
-  description?: string
+  description?: string,
+  settings?: SavedTemplateSettings
 ): SavedTemplateItem {
   const templates = getSavedTemplates();
   const now = new Date();
@@ -65,7 +79,8 @@ export function saveTemplate(
     tags,
     updatedAt: dateStr,
     description: description || undefined,
-    previewSnippet
+    previewSnippet,
+    settings: settings || undefined
   };
 
   const updated = [newItem, ...templates];
@@ -89,7 +104,7 @@ export function deleteSavedTemplate(id: string): SavedTemplateItem[] {
 export function exportTemplatesBackup(templates: SavedTemplateItem[], fileNamePrefix: string = 'namns-mergeword-templates-backup'): void {
   const exportData = {
     app: 'Namns Merge Word',
-    version: '1.0.5',
+    version: '1.0.8',
     exportDate: new Date().toISOString(),
     templatesCount: templates.length,
     templates
@@ -107,7 +122,7 @@ export function exportTemplatesBackup(templates: SavedTemplateItem[], fileNamePr
 export function exportSingleTemplateBackup(template: SavedTemplateItem): void {
   const exportData = {
     app: 'Namns Merge Word',
-    version: '1.0.5',
+    version: '1.0.8',
     exportDate: new Date().toISOString(),
     templatesCount: 1,
     templates: [template]
@@ -148,7 +163,17 @@ export function parseTemplatesBackupJson(jsonString: string): SavedTemplateItem[
           tags: Array.isArray(item.tags) ? item.tags : [],
           updatedAt: item.updatedAt || new Date().toLocaleDateString('vi-VN'),
           description: item.description,
-          previewSnippet: item.previewSnippet
+          previewSnippet: item.previewSnippet,
+          settings: item.settings ? {
+            fontId: item.settings.fontId,
+            fontSize: item.settings.fontSize,
+            lineHeight: item.settings.lineHeight,
+            textAlign: item.settings.textAlign,
+            preserveOriginalFormat: item.settings.preserveOriginalFormat,
+            pageMargin: item.settings.pageMargin,
+            customMargins: item.settings.customMargins,
+            originalMargins: item.settings.originalMargins
+          } : undefined
         });
       }
     }

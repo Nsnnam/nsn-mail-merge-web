@@ -10,7 +10,9 @@ import {
   Sparkles,
   AlertCircle,
   CheckCircle2,
-  FileText
+  FileText,
+  Ruler,
+  Type
 } from 'lucide-react';
 import {
   SavedTemplateItem,
@@ -23,6 +25,9 @@ import {
   importTemplatesBackup
 } from '../lib/templateStorage';
 import { ThemeGradient } from '../lib/theme';
+import { DocumentSettings } from '../types';
+import { VIETNAMESE_FONTS } from '../lib/fonts';
+import { getEffectiveMargin } from '../lib/docxHelper';
 
 interface TemplateManagerModalProps {
   isOpen: boolean;
@@ -30,6 +35,7 @@ interface TemplateManagerModalProps {
   currentTemplateHtml: string;
   currentTags: string[];
   currentDocName: string | null;
+  currentSettings: DocumentSettings;
   onSelectTemplate: (template: SavedTemplateItem) => void;
   theme?: ThemeGradient;
 }
@@ -40,6 +46,7 @@ export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({
   currentTemplateHtml,
   currentTags,
   currentDocName,
+  currentSettings,
   onSelectTemplate,
   theme
 }) => {
@@ -75,9 +82,24 @@ export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({
     }
 
     try {
-      const saved = saveTemplate(newTemplateName, currentTemplateHtml, currentTags, newTemplateDesc);
+      const saved = saveTemplate(
+        newTemplateName,
+        currentTemplateHtml,
+        currentTags,
+        newTemplateDesc,
+        {
+          fontId: currentSettings.fontId,
+          fontSize: currentSettings.fontSize,
+          lineHeight: currentSettings.lineHeight,
+          textAlign: currentSettings.textAlign,
+          preserveOriginalFormat: currentSettings.preserveOriginalFormat,
+          pageMargin: currentSettings.pageMargin,
+          customMargins: currentSettings.customMargins,
+          originalMargins: currentSettings.originalMargins
+        }
+      );
       setTemplates(getSavedTemplates());
-      showToast('success', `Đã lưu thành công mẫu "${saved.name}" vào bộ nhớ máy.`);
+      showToast('success', `Đã lưu thành công mẫu "${saved.name}" (kèm thông số lề & font) vào kho lưu trữ.`);
       setNewTemplateDesc('');
     } catch (err: any) {
       showToast('error', err.message || 'Lỗi khi lưu mẫu.');
@@ -202,6 +224,27 @@ export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({
                 </div>
               </div>
 
+              {/* Thông tin cấu hình lề & font được lưu tự động kèm mẫu */}
+              <div className="bg-indigo-50/70 border border-indigo-200/70 rounded-lg p-2.5 flex items-center justify-between flex-wrap gap-2 text-[11px] text-indigo-950">
+                <div className="flex items-center gap-1.5 font-semibold">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Định dạng lề &amp; font lưu kèm mẫu:</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="bg-white px-2 py-0.5 rounded border border-indigo-200 font-semibold text-indigo-900 flex items-center gap-1">
+                    <Type className="w-3 h-3 text-indigo-600" />
+                    {VIETNAMESE_FONTS.find(f => f.id === currentSettings.fontId)?.name || currentSettings.fontId} · {currentSettings.fontSize}
+                  </span>
+                  <span className="bg-white px-2 py-0.5 rounded border border-indigo-200 font-semibold text-indigo-900 flex items-center gap-1">
+                    <Ruler className="w-3 h-3 text-indigo-600" />
+                    Lề: T:{getEffectiveMargin(currentSettings).top} / D:{getEffectiveMargin(currentSettings).bottom} / T:{getEffectiveMargin(currentSettings).left} / P:{getEffectiveMargin(currentSettings).right} mm
+                    <span className="text-[10px] text-indigo-600 font-normal">
+                      ({currentSettings.pageMargin === 'custom' ? 'Tùy chỉnh' : currentSettings.pageMargin === 'nd30' ? 'NĐ 30' : currentSettings.pageMargin === 'original' ? 'File gốc' : currentSettings.pageMargin})
+                    </span>
+                  </span>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between pt-1">
                 <span className="text-[11px] text-slate-500">
                   Số biến phát hiện: <strong>{currentTags.length}</strong> biến
@@ -295,6 +338,38 @@ export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({
                           ))}
                           {tpl.tags.length > 5 && (
                             <span className="text-[10px] text-slate-400 font-medium">+{tpl.tags.length - 5} biến</span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Hiển thị thông số lề & font đã lưu kèm mẫu */}
+                      {tpl.settings && (
+                        <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                          {tpl.settings.fontId && (
+                            <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-semibold rounded border border-indigo-100 flex items-center gap-1">
+                              <Type className="w-2.5 h-2.5 text-indigo-600" />
+                              <span>{VIETNAMESE_FONTS.find(f => f.id === tpl.settings?.fontId)?.name || tpl.settings.fontId} · {tpl.settings.fontSize || '13pt'}</span>
+                            </span>
+                          )}
+                          {tpl.settings.pageMargin && (
+                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-800 text-[10px] font-semibold rounded border border-emerald-100 flex items-center gap-1">
+                              <Ruler className="w-2.5 h-2.5 text-emerald-600" />
+                              <span>
+                                Lề: {
+                                  tpl.settings.pageMargin === 'custom' && tpl.settings.customMargins
+                                    ? `T:${tpl.settings.customMargins.top} D:${tpl.settings.customMargins.bottom} T:${tpl.settings.customMargins.left} P:${tpl.settings.customMargins.right}mm`
+                                    : tpl.settings.pageMargin === 'nd30'
+                                    ? 'NĐ 30 (20/20/30/15mm)'
+                                    : tpl.settings.pageMargin === 'narrow'
+                                    ? 'Hẹp (12.7mm)'
+                                    : tpl.settings.pageMargin === 'normal'
+                                    ? 'Tiêu chuẩn (25.4mm)'
+                                    : tpl.settings.originalMargins
+                                    ? `T:${tpl.settings.originalMargins.top} D:${tpl.settings.originalMargins.bottom} T:${tpl.settings.originalMargins.left} P:${tpl.settings.originalMargins.right}mm`
+                                    : tpl.settings.pageMargin
+                                }
+                              </span>
+                            </span>
                           )}
                         </div>
                       )}

@@ -1,6 +1,6 @@
 {
   "name": "nsn-mail-merge-web",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": false,
   "type": "module",
   "description": "Ứng dụng Mail Merge Word - Excel thông minh trên nền Web (Hỗ trợ đa font Unicode tiếng Việt, Be Vietnam Pro, Preview trực quan, In & Xuất PDF/Word hàng loạt - NSN App Standard)",
@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:single": "tsc && vite build --config vite.singlefile.config.ts && node -e \"const fs=require('fs'); if(!fs.existsSync('releases')) fs.mkdirSync('releases'); fs.copyFileSync('dist-single/index.html', 'releases/namns-mergeword-v1.0.7-offline.html');\"",
+    "build:single": "tsc && vite build --config vite.singlefile.config.ts && node -e \"const fs=require('fs'); if(!fs.existsSync('releases')) fs.mkdirSync('releases'); fs.copyFileSync('dist-single/index.html', 'releases/namns-mergeword-v1.0.8-offline.html');\"",
     "preview": "vite preview"
   },
   "dependencies": {

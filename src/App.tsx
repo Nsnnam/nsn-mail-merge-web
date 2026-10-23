@@ -234,6 +234,22 @@ export const App: React.FC = () => {
     setDetectedWordTags(tpl.tags);
     setWordFileName(tpl.name + '.docx');
     setIsPreviewMode(false);
+
+    // Tự động khôi phục cấu hình lề trang & font chữ đã lưu kèm theo mẫu
+    if (tpl.settings) {
+      setSettings(prev => ({
+        ...prev,
+        ...(tpl.settings?.fontId ? { fontId: tpl.settings.fontId } : {}),
+        ...(tpl.settings?.fontSize ? { fontSize: tpl.settings.fontSize } : {}),
+        ...(tpl.settings?.lineHeight ? { lineHeight: tpl.settings.lineHeight } : {}),
+        ...(tpl.settings?.textAlign ? { textAlign: tpl.settings.textAlign } : {}),
+        ...(tpl.settings?.preserveOriginalFormat !== undefined ? { preserveOriginalFormat: tpl.settings.preserveOriginalFormat } : {}),
+        ...(tpl.settings?.pageMargin ? { pageMargin: tpl.settings.pageMargin } : {}),
+        ...(tpl.settings?.customMargins ? { customMargins: tpl.settings.customMargins } : {}),
+        ...(tpl.settings?.originalMargins ? { originalMargins: tpl.settings.originalMargins } : {})
+      }));
+    }
+
     if (excelFiles.length > 0 || excelFileName) {
       setIsImportCollapsed(true);
     }
@@ -553,6 +569,7 @@ export const App: React.FC = () => {
           currentTemplateHtml={templateHtml}
           currentTags={detectedWordTags}
           currentDocName={wordFileName}
+          currentSettings={settings}
           onSelectTemplate={handleSelectTemplateFromStorage}
           theme={currentTheme}
         />

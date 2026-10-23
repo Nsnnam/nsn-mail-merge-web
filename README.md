@@ -5,7 +5,7 @@
 > Tuân thủ chuẩn **NSN App Standard** · Offline 100% Client-Side trong bộ nhớ trình duyệt.
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Online-blue?style=flat-square&logo=github)](https://Nsnnam.github.io/nsn-mail-merge-web/)
-[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.7-emerald?style=flat-square)](CHANGELOG.md)
+[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.8-emerald?style=flat-square)](CHANGELOG.md)
 [![Tác giả](https://img.shields.io/badge/Tác_giả-Nguyễn_Sơn_Nam-indigo?style=flat-square)](AUTHORS.md)
 [![Ủng hộ](https://img.shields.io/badge/Mời_cà_phê-BIDV_8855989777-amber?style=flat-square)](SUPPORT.md)
 
@@ -20,7 +20,17 @@
    - **Đồng bộ lề trang toàn diện**: Hiển thị trực quan trên trang A4 của Editor/Preview, chuẩn hóa khung in A4 cách ly và cập nhật lại thẻ `<w:pgMar>` của file Word `.docx` xuất ra.
    - **Font mặc định Times New Roman**: Mặc định áp dụng Times New Roman khi nạp file Word tải lên.
    - **Cỡ chữ theo mẫu & Đa dạng tùy chọn**: Tự động nhận diện cỡ chữ của tài liệu mẫu, hỗ trợ chuyển đổi linh hoạt từ 8pt đến 36pt.
-2. **Giao diện hiện đại & Tối ưu không gian làm việc**:
+2. **Menu ngữ cảnh chuột phải (Context Menu) thông minh**:
+   - **Tự động nhận diện ngữ cảnh**: Khi click chuột phải vào bảng biểu, lập tức mở menu công cụ bảng (thêm/xóa dòng, thêm/xóa cột, căn lề ô ngang/dọc, màu nền ô, viền bảng nét liền/bỏ viền, xóa bảng).
+   - **Định dạng văn bản trực tiếp**: Khi bôi đen hoặc click vào chữ, chuột phải cho phép thay đổi font chữ, cỡ chữ, in đậm, nghiêng, gạch chân, đổi màu chữ, màu highlight, xóa định dạng, căn lề 4 hướng, thụt lề, chèn Tab, chèn ký tự đặc biệt, ô kiểm, Hoàn tác / Làm lại.
+   - **Bảo toàn vùng bôi đen**: Cơ chế `preventDefault` trên sự kiện chuột giúp không bao giờ bị mất đoạn chữ bôi đen khi chọn các lệnh trên menu.
+   - **Thuật toán chống tràn màn hình**: Định vị thông minh không bị che khuất hoặc tràn viền màn hình; tự đóng khi ấn phím Escape hoặc click ra ngoài.
+3. **Kho mẫu văn bản & Lưu kèm lề / font (.JSON)**:
+   - Lưu trữ các mẫu văn bản đã chỉnh sửa vào `localStorage` trình duyệt và tự động gắn kèm cấu hình lề (mm), font và cỡ chữ.
+   - Khi load lại mẫu hoặc khôi phục từ file JSON sao lưu, hệ thống tự động thiết lập lại đúng lề và font của mẫu đó.
+   - Xuất/Tải file sao lưu `.JSON` về máy tính cá nhân để lưu trữ lâu dài.
+   - Khôi phục nhanh chóng kho mẫu từ file `.JSON` bất kỳ lúc nào.
+4. **Giao diện hiện đại & Tối ưu không gian làm việc**:
    - **Giãn tối đa theo kích thước thiết bị**: Container mở rộng tới `max-w-[1750px]`, tận dụng toàn bộ bề ngang màn hình máy tính Full HD/2K/4K, không bị bó hẹp hay để lãng phí khoảng trống 2 bên.
    - **Mặc định Chế độ Soạn thảo (Edit Mode)**: Khi import hoặc nạp tệp, trang web lập tức mở chế độ soạn thảo giúp người dùng thao tác định dạng và chèn biến ngay mà không cần thêm thao tác chuyển đổi.
    - **Mặc định hiển thị bảng nạp tệp**: Khi khởi tạo trang web, bảng nạp tệp hiển thị rõ ràng, thân thiện; sau khi người dùng nạp file Word và Excel, bảng sẽ tự động thu gọn để tối ưu hóa diện tích làm việc.

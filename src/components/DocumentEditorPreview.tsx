@@ -138,6 +138,30 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
   const tableMenuRef = useRef<HTMLDivElement>(null);
   const symbolsMenuRef = useRef<HTMLDivElement>(null);
 
+  // Ref và State cho Menu chuột phải (Context Menu)
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+  const contextTargetCellRef = useRef<{
+    cell: HTMLTableCellElement;
+    row: HTMLTableRowElement;
+    table: HTMLTableElement;
+  } | null>(null);
+
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    x: number;
+    y: number;
+    inTable: boolean;
+    hasSelection: boolean;
+    selectedText: string;
+  }>({
+    isOpen: false,
+    x: 0,
+    y: 0,
+    inTable: false,
+    hasSelection: false,
+    selectedText: ''
+  });
+
   const updateUndoRedoState = () => {
     setCanUndo(historyIndexRef.current > 0);
     setCanRedo(historyIndexRef.current < historyStackRef.current.length - 1);
@@ -209,7 +233,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     }, 50);
   };
 
-  // Đóng Table Menu và Symbols Menu khi click chuột ra ngoài
+  // Đóng Table Menu, Symbols Menu và Context Menu khi click chuột ra ngoài hoặc ấn phím Escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -219,12 +243,25 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
       if (isSymbolsOpen && symbolsMenuRef.current && !symbolsMenuRef.current.contains(target)) {
         setIsSymbolsOpen(false);
       }
+      if (contextMenu.isOpen && contextMenuRef.current && !contextMenuRef.current.contains(target)) {
+        setContextMenu(prev => ({ ...prev, isOpen: false }));
+      }
     };
+    const handleKeyDownGlobal = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (contextMenu.isOpen) setContextMenu(prev => ({ ...prev, isOpen: false }));
+        if (isTableMenuOpen) setIsTableMenuOpen(false);
+        if (isSymbolsOpen) setIsSymbolsOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDownGlobal);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDownGlobal);
     };
-  }, [isTableMenuOpen, isSymbolsOpen]);
+  }, [isTableMenuOpen, isSymbolsOpen, contextMenu.isOpen]);
 
   const effectiveMargin = getEffectiveMargin(settings);
 
@@ -450,6 +487,10 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
 
   // === BỘ CÔNG CỤ BẢNG BIỂU CHUYÊN NGHIỆP (TABLE SUITE) ===
   const getClosestCellAndTable = () => {
+    // Ưu tiên cell được chọn từ chuột phải nếu còn kết nối trong DOM
+    if (contextTargetCellRef.current && contextTargetCellRef.current.table.isConnected) {
+      return contextTargetCellRef.current;
+    }
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0 || !editorRef.current) return null;
     let node: Node | null = sel.anchorNode;
@@ -462,6 +503,107 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     const table = row?.closest('table') as HTMLTableElement | null;
     if (!cell || !row || !table) return null;
     return { cell, row, table };
+  };
+
+  // === XỬ LÝ MENU NGỮ CẢNH CHUỘT PHẢI (CONTEXT MENU) ===
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (isPreviewMode) return;
+    e.preventDefault();
+
+    saveSelection();
+
+    const target = e.target as HTMLElement;
+    const cell = target.closest('td, th') as HTMLTableCellElement | null;
+    const row = cell?.closest('tr') as HTMLTableRowElement | null;
+    const table = row?.closest('table') as HTMLTableElement | null;
+
+    if (cell && row && table && editorRef.current?.contains(table)) {
+      contextTargetCellRef.current = { cell, row, table };
+    } else {
+      contextTargetCellRef.current = null;
+    }
+
+    const sel = window.getSelection();
+    const selText = sel ? sel.toString().trim() : '';
+    const hasSelection = selText.length > 0;
+
+    const menuWidth = 320;
+    const menuHeight = cell ? 540 : 380;
+    let posX = e.clientX;
+    let posY = e.clientY;
+
+    if (posX + menuWidth > window.innerWidth - 12) {
+      posX = Math.max(12, window.innerWidth - menuWidth - 12);
+    }
+    if (posY + menuHeight > window.innerHeight - 12) {
+      posY = Math.max(12, window.innerHeight - menuHeight - 12);
+    }
+
+    setContextMenu({
+      isOpen: true,
+      x: posX,
+      y: posY,
+      inTable: Boolean(cell && table),
+      hasSelection,
+      selectedText: selText
+    });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(prev => prev.isOpen ? { ...prev, isOpen: false } : prev);
+  };
+
+  const execContextFormat = (cmd: string, val?: string) => {
+    if (savedRangeRef.current && editorRef.current) {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+    }
+    execFormat(cmd, val);
+    closeContextMenu();
+  };
+
+  const applyContextInlineStyle = (property: string, val: string) => {
+    if (savedRangeRef.current && editorRef.current) {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+    }
+    applyInlineStyle(property, val);
+    closeContextMenu();
+  };
+
+  const runTableAction = (action: () => void) => {
+    action();
+    closeContextMenu();
+  };
+
+  const runContextTab = () => {
+    if (savedRangeRef.current && editorRef.current) {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+    }
+    insertTabSpacer();
+    closeContextMenu();
+  };
+
+  const runContextSymbol = (sym: string) => {
+    if (savedRangeRef.current && editorRef.current) {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+    }
+    insertSymbol(sym);
+    closeContextMenu();
   };
 
   const insertTable = (rows: number, cols: number) => {
@@ -1589,6 +1731,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             padding: `${effectiveMargin.top}mm ${effectiveMargin.right}mm ${effectiveMargin.bottom}mm ${effectiveMargin.left}mm`,
             boxSizing: 'border-box'
           }}
+          onContextMenu={handleContextMenu}
         >
           {/* Vùng soạn thảo / Preview có thể chỉnh sửa */}
           <div
@@ -1610,6 +1753,434 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
           />
         </div>
       </div>
+
+      {/* CONTEXT MENU CHUỘT PHẢI THÔNG MINH (BẢNG BIỂU & ĐỊNH DẠNG VĂN BẢN) */}
+      {contextMenu.isOpen && !isPreviewMode && (
+        <div
+          ref={contextMenuRef}
+          className="fixed z-50 bg-white border border-slate-300 rounded-2xl shadow-2xl p-3 w-80 sm:w-84 max-w-[calc(100vw-1.5rem)] max-h-[calc(100vh-2rem)] overflow-y-auto space-y-2.5 animate-in fade-in zoom-in-95 duration-100 overscroll-contain select-none"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`
+          }}
+          onMouseDown={(e) => {
+            // Ngăn click vào vùng trống của context menu làm mất vùng chọn bôi đen của người dùng
+            if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'SELECT') {
+              e.preventDefault();
+            }
+          }}
+        >
+          {/* Header Context Menu */}
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+              {contextMenu.inTable ? (
+                <>
+                  <TableIcon className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Công cụ Bảng &amp; Soạn thảo</span>
+                </>
+              ) : contextMenu.hasSelection ? (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  <span className="truncate max-w-[190px]">
+                    Đoạn: "{contextMenu.selectedText.slice(0, 16)}..."
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Edit3 className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Menu công cụ soạn thảo</span>
+                </>
+              )}
+            </div>
+            <button
+              onClick={closeContextMenu}
+              onMouseDown={(e) => e.preventDefault()}
+              className="w-5 h-5 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 text-xs font-bold transition-colors"
+              title="Đóng menu"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Mini Toolbar: Undo, Redo, Bold, Italic, Underline, Strikethrough, Color, Highlight, ClearFormat */}
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200/80 rounded-lg p-1 flex-wrap">
+            <button
+              onClick={() => { handleUndo(); closeContextMenu(); }}
+              onMouseDown={(e) => e.preventDefault()}
+              disabled={!canUndo}
+              className={`p-1 rounded ${canUndo ? 'hover:bg-slate-200 text-slate-700 cursor-pointer' : 'text-slate-300 cursor-not-allowed'}`}
+              title="Hoàn tác (Ctrl+Z)"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => { handleRedo(); closeContextMenu(); }}
+              onMouseDown={(e) => e.preventDefault()}
+              disabled={!canRedo}
+              className={`p-1 rounded ${canRedo ? 'hover:bg-slate-200 text-slate-700 cursor-pointer' : 'text-slate-300 cursor-not-allowed'}`}
+              title="Làm lại (Ctrl+Y)"
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+            </button>
+
+            <span className="w-px h-3.5 bg-slate-200 mx-0.5"></span>
+
+            <button
+              onClick={() => execContextFormat('bold')}
+              onMouseDown={(e) => e.preventDefault()}
+              className="p-1 rounded hover:bg-slate-200 text-slate-800 font-bold"
+              title="In đậm (Ctrl+B)"
+            >
+              <Bold className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => execContextFormat('italic')}
+              onMouseDown={(e) => e.preventDefault()}
+              className="p-1 rounded hover:bg-slate-200 text-slate-800 italic"
+              title="In nghiêng (Ctrl+I)"
+            >
+              <Italic className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => execContextFormat('underline')}
+              onMouseDown={(e) => e.preventDefault()}
+              className="p-1 rounded hover:bg-slate-200 text-slate-800 underline"
+              title="Gạch chân (Ctrl+U)"
+            >
+              <Underline className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => execContextFormat('strikeThrough')}
+              onMouseDown={(e) => e.preventDefault()}
+              className="p-1 rounded hover:bg-slate-200 text-slate-800"
+              title="Gạch ngang"
+            >
+              <Strikethrough className="w-3.5 h-3.5" />
+            </button>
+
+            <span className="w-px h-3.5 bg-slate-200 mx-0.5"></span>
+
+            <label className="flex items-center gap-0.5 p-1 rounded hover:bg-slate-200 cursor-pointer" title="Đổi màu chữ">
+              <Palette className="w-3.5 h-3.5 text-blue-600" />
+              <input
+                type="color"
+                value={textColor}
+                onChange={(e) => {
+                  setTextColor(e.target.value);
+                  applyContextInlineStyle('color', e.target.value);
+                }}
+                className="w-3.5 h-3.5 rounded cursor-pointer border-0 p-0 bg-transparent"
+              />
+            </label>
+
+            <label className="flex items-center gap-0.5 p-1 rounded hover:bg-slate-200 cursor-pointer" title="Màu nền chữ (Highlight)">
+              <Highlighter className="w-3.5 h-3.5 text-amber-500" />
+              <input
+                type="color"
+                value={highlightColor}
+                onChange={(e) => {
+                  setHighlightColor(e.target.value);
+                  applyContextInlineStyle('background-color', e.target.value);
+                }}
+                className="w-3.5 h-3.5 rounded cursor-pointer border-0 p-0 bg-transparent"
+              />
+            </label>
+
+            <button
+              onClick={() => execContextFormat('removeFormat')}
+              onMouseDown={(e) => e.preventDefault()}
+              className="p-1 rounded hover:bg-rose-100 text-rose-600"
+              title="Xóa định dạng"
+            >
+              <RemoveFormatting className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Chọn Font chữ & Cỡ chữ */}
+          <div className="grid grid-cols-2 gap-1.5">
+            <div>
+              <span className="text-[10px] font-semibold text-slate-500 block mb-0.5">Font chữ:</span>
+              <select
+                onChange={(e) => applyContextInlineStyle('font-family', e.target.value)}
+                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+                defaultValue=""
+              >
+                <option value="" disabled>Chọn Font...</option>
+                {VIETNAMESE_FONTS.map(f => (
+                  <option key={f.id} value={f.family}>{f.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <span className="text-[10px] font-semibold text-slate-500 block mb-0.5">Cỡ chữ:</span>
+              <select
+                onChange={(e) => applyContextInlineStyle('font-size', e.target.value)}
+                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+                defaultValue=""
+              >
+                <option value="" disabled>Cỡ chữ...</option>
+                <option value="9pt">9 pt</option>
+                <option value="10pt">10 pt</option>
+                <option value="11pt">11 pt</option>
+                <option value="12pt">12 pt</option>
+                <option value="13pt">13 pt (Chuẩn NĐ 30)</option>
+                <option value="14pt">14 pt (Chuẩn NĐ 30)</option>
+                <option value="15pt">15 pt</option>
+                <option value="16pt">16 pt</option>
+                <option value="18pt">18 pt</option>
+                <option value="20pt">20 pt</option>
+                <option value="24pt">24 pt</option>
+                <option value="28pt">28 pt</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Căn lề đoạn văn & Thụt lề / Tab */}
+          <div>
+            <span className="text-[10px] font-semibold text-slate-500 block mb-0.5">Căn lề đoạn văn &amp; Tab:</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => execContextFormat('justifyLeft')}
+                onMouseDown={(e) => e.preventDefault()}
+                className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-center border border-slate-200 flex items-center justify-center text-slate-700"
+                title="Căn trái"
+              >
+                <AlignLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => execContextFormat('justifyCenter')}
+                onMouseDown={(e) => e.preventDefault()}
+                className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-center border border-slate-200 flex items-center justify-center text-slate-700"
+                title="Căn giữa"
+              >
+                <AlignCenter className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => execContextFormat('justifyRight')}
+                onMouseDown={(e) => e.preventDefault()}
+                className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-center border border-slate-200 flex items-center justify-center text-slate-700"
+                title="Căn phải"
+              >
+                <AlignRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => execContextFormat('justifyFull')}
+                onMouseDown={(e) => e.preventDefault()}
+                className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-center border border-slate-200 flex items-center justify-center text-slate-700"
+                title="Căn đều 2 bên"
+              >
+                <AlignJustify className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={runContextTab}
+                onMouseDown={(e) => e.preventDefault()}
+                className="px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-center border border-slate-200 font-mono text-[11px] font-bold text-slate-700"
+                title="Chèn khoảng cách Tab thụt dòng"
+              >
+                Tab ⇥
+              </button>
+            </div>
+          </div>
+
+          {/* DANH SÁCH & THỤT LỀ */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => execContextFormat('insertUnorderedList')}
+              onMouseDown={(e) => e.preventDefault()}
+              className="flex-1 py-1 px-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center gap-1 text-[11px] text-slate-700"
+              title="Danh sách dấu chấm"
+            >
+              <List className="w-3 h-3 text-slate-600" />
+              <span>Dấu chấm</span>
+            </button>
+            <button
+              onClick={() => execContextFormat('insertOrderedList')}
+              onMouseDown={(e) => e.preventDefault()}
+              className="flex-1 py-1 px-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center gap-1 text-[11px] text-slate-700"
+              title="Danh sách số thứ tự"
+            >
+              <ListOrdered className="w-3 h-3 text-slate-600" />
+              <span>Đánh số</span>
+            </button>
+            <button
+              onClick={() => execContextFormat('outdent')}
+              onMouseDown={(e) => e.preventDefault()}
+              className="p-1 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 text-slate-700"
+              title="Giảm lề dòng"
+            >
+              <Outdent className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => execContextFormat('indent')}
+              onMouseDown={(e) => e.preventDefault()}
+              className="p-1 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 text-slate-700"
+              title="Tăng lề dòng"
+            >
+              <Indent className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* NẾU CHUỘT PHẢI VÀO BẢNG (IN TABLE): CÔNG CỤ BẢNG TOÀN DIỆN */}
+          {contextMenu.inTable && (
+            <div className="border border-indigo-200 bg-indigo-50/50 rounded-xl p-2.5 space-y-2">
+              <div className="flex items-center justify-between border-b border-indigo-100 pb-1.5">
+                <span className="text-[11px] font-bold text-indigo-900 flex items-center gap-1">
+                  <TableIcon className="w-3.5 h-3.5 text-indigo-600" />
+                  Công cụ Bảng (Table Suite)
+                </span>
+                <span className="text-[10px] text-indigo-700 font-semibold bg-indigo-100/80 px-1.5 py-0.2 rounded">
+                  Ô đang trỏ
+                </span>
+              </div>
+
+              {/* Thao tác dòng */}
+              <div>
+                <span className="text-[10px] font-semibold text-slate-600 block mb-1 flex items-center gap-1">
+                  <Rows className="w-3 h-3 text-slate-500" /> Thao tác dòng (Row):
+                </span>
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    onClick={() => runTableAction(handleInsertRowAbove)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200 text-center"
+                    title="Thêm 1 dòng phía trên"
+                  >
+                    + Dòng trên
+                  </button>
+                  <button
+                    onClick={() => runTableAction(handleInsertRowBelow)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200 text-center"
+                    title="Thêm 1 dòng phía dưới"
+                  >
+                    + Dòng dưới
+                  </button>
+                  <button
+                    onClick={() => runTableAction(handleDeleteRow)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded text-[11px] font-semibold border border-rose-200 text-center"
+                    title="Xóa dòng hiện tại"
+                  >
+                    Xóa dòng
+                  </button>
+                </div>
+              </div>
+
+              {/* Thao tác cột */}
+              <div>
+                <span className="text-[10px] font-semibold text-slate-600 block mb-1 flex items-center gap-1">
+                  <Columns className="w-3 h-3 text-slate-500" /> Thao tác cột (Column):
+                </span>
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    onClick={() => runTableAction(handleInsertColLeft)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200 text-center"
+                    title="Thêm 1 cột bên trái"
+                  >
+                    + Cột trái
+                  </button>
+                  <button
+                    onClick={() => runTableAction(handleInsertColRight)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[11px] font-medium border border-slate-200 text-center"
+                    title="Thêm 1 cột bên phải"
+                  >
+                    + Cột phải
+                  </button>
+                  <button
+                    onClick={() => runTableAction(handleDeleteCol)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded text-[11px] font-semibold border border-rose-200 text-center"
+                    title="Xóa cột hiện tại"
+                  >
+                    Xóa cột
+                  </button>
+                </div>
+              </div>
+
+              {/* Căn lề ô */}
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <span className="text-[10px] font-semibold text-slate-600 block mb-0.5">Căn ngang ô:</span>
+                  <div className="flex items-center gap-0.5">
+                    <button onClick={() => runTableAction(() => handleAlignCell('left'))} onMouseDown={(e) => e.preventDefault()} className="flex-1 p-0.5 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200">Trái</button>
+                    <button onClick={() => runTableAction(() => handleAlignCell('center'))} onMouseDown={(e) => e.preventDefault()} className="flex-1 p-0.5 bg-white hover:bg-slate-100 rounded text-[10px] font-bold border border-slate-200">Giữa</button>
+                    <button onClick={() => runTableAction(() => handleAlignCell('right'))} onMouseDown={(e) => e.preventDefault()} className="flex-1 p-0.5 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200">Phải</button>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] font-semibold text-slate-600 block mb-0.5">Căn dọc ô:</span>
+                  <div className="flex items-center gap-0.5">
+                    <button onClick={() => runTableAction(() => handleValignCell('top'))} onMouseDown={(e) => e.preventDefault()} className="flex-1 p-0.5 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200">Đỉnh</button>
+                    <button onClick={() => runTableAction(() => handleValignCell('middle'))} onMouseDown={(e) => e.preventDefault()} className="flex-1 p-0.5 bg-white hover:bg-slate-100 rounded text-[10px] font-bold border border-slate-200">Giữa</button>
+                    <button onClick={() => runTableAction(() => handleValignCell('bottom'))} onMouseDown={(e) => e.preventDefault()} className="flex-1 p-0.5 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200">Đáy</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Nền ô & Viền */}
+              <div className="flex items-center justify-between gap-1 pt-1 border-t border-indigo-100">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-semibold text-slate-600">Nền ô:</span>
+                  <input
+                    type="color"
+                    value={cellBgColor}
+                    onChange={(e) => {
+                      setCellBgColor(e.target.value);
+                      handleCellBgColorChange(e.target.value);
+                    }}
+                    className="w-5 h-5 rounded cursor-pointer border border-slate-200 p-0 bg-transparent"
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => runTableAction(() => handleSetTableBorders('solid'))}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="px-2 py-0.5 bg-white hover:bg-slate-100 rounded text-[10px] font-semibold border border-slate-200"
+                  >
+                    Viền liền
+                  </button>
+                  <button
+                    onClick={() => runTableAction(() => handleSetTableBorders('none'))}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="px-2 py-0.5 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200"
+                  >
+                    Bỏ viền
+                  </button>
+                </div>
+              </div>
+
+              {/* Xóa toàn bộ bảng */}
+              <button
+                onClick={() => runTableAction(handleDeleteTable)}
+                onMouseDown={(e) => e.preventDefault()}
+                className="w-full py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-[11px] font-semibold border border-rose-200 flex items-center justify-center gap-1 transition-colors"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Xóa toàn bộ bảng</span>
+              </button>
+            </div>
+          )}
+
+          {/* Chèn Ký tự đặc biệt & Ô kiểm nhanh */}
+          <div className="border-t border-slate-100 pt-1.5">
+            <span className="text-[10px] font-semibold text-slate-500 block mb-1">Chèn nhanh ký tự &amp; ô kiểm:</span>
+            <div className="flex items-center gap-1 flex-wrap">
+              {['✓', '✔', '☐', '☑', '★', '•', '→'].map(sym => (
+                <button
+                  key={sym}
+                  onClick={() => runContextSymbol(sym)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="w-6 h-6 rounded bg-slate-50 hover:bg-blue-50 hover:text-blue-600 border border-slate-200 flex items-center justify-center text-xs font-semibold"
+                >
+                  {sym}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

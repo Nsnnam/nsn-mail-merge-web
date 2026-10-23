@@ -42,14 +42,23 @@ export const APP_META: AppMeta = {
   shortName: "Merge Word",
   description: "Chỉnh sửa và trộn thư",
   appCode: "NAMNSMERGE",
-  version: "1.0.7",
-  date: "2026-10-16",
+  version: "1.0.8",
+  date: "2026-10-23",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
   role: "Tác giả · Tiện ích HIS / Excel / Tự động hóa văn bản",
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.8",
+      date: "2026-10-23",
+      changes: [
+        "Tích hợp Menu ngữ cảnh chuột phải (Context Menu) thông minh trong chế độ soạn thảo: Click chuột phải vào bảng biểu hiển thị trọn bộ công cụ Table Suite (thêm/xóa dòng trên dưới, thêm/xóa cột trái phải, căn lề ô ngang/dọc, màu nền ô, viền bảng, xóa bảng); bôi đen hoặc click vào văn bản cho phép chỉnh sửa font, cỡ chữ, in đậm, in nghiêng, gạch chân, màu chữ, highlight, căn lề, thụt lề, danh sách, Tab, ký tự đặc biệt và Undo/Redo.",
+        "Cơ chế chống mất vùng chọn (Selection Preservation) & chống tràn màn hình: Giữ nguyên vẹn vùng bôi đen của người dùng khi thao tác với các nút trên menu chuột phải, tự tính toán tọa độ x/y an toàn và tự đóng khi bấm Escape hoặc click ra ngoài.",
+        "Lưu & Phục hồi lề trang và font chữ theo từng mẫu vào Kho mẫu & Sao lưu (.JSON): Mẫu lưu trữ tự động gắn kèm cấu hình lề (kể cả lề tùy chỉnh mm), font chữ và cỡ chữ; khi nạp lại mẫu hoặc nhập khẩu file JSON sao lưu, hệ thống tự động thiết lập lại chính xác lề và font của mẫu đó."
+      ]
+    },
     {
       version: "1.0.7",
       date: "2026-10-16",

@@ -3,6 +3,23 @@
 Tất cả thay đổi đáng chú ý của dự án **Namns Merge Word** được ghi lại tại đây theo chuẩn [Keep a Changelog](https://keepachangelog.com/) và [Semantic Versioning](https://semver.org/).  
 Múi giờ áp dụng: **Asia/Ho_Chi_Minh (GMT+7)**.
 
+## [1.0.8] - 2026-10-23
+
+### Thêm mới & Nâng cấp (Added & Enhanced)
+- **Tích hợp Menu ngữ cảnh chuột phải (Context Menu) thông minh:**
+  - Kích hoạt khi chuột phải trong trình soạn thảo: Tự động phân tích ngữ cảnh của phần tử được trỏ.
+  - Chuột phải vào Bảng biểu: Hiển thị ngay bộ công cụ Bảng biểu (Table Suite) bao gồm thêm/xóa dòng trên dưới, thêm/xóa cột trái phải, căn lề ô (ngang & dọc), màu nền ô, đường viền nét liền/bỏ viền, và xóa toàn bộ bảng.
+  - Bôi đen hoặc click vào văn bản: Hiển thị thanh công cụ định dạng trực tiếp (In đậm, In nghiêng, Gạch chân, Gạch ngang, đổi Font chữ tiếng Việt, đổi Cỡ chữ 9pt-28pt, đổi màu chữ, màu highlight nền, xóa định dạng, căn lề 4 hướng, danh sách, phím Tab, ký tự đặc biệt, và Hoàn tác / Làm lại).
+  - Cơ chế bảo toàn vùng chọn (Selection Preservation): Sử dụng `e.preventDefault()` trên sự kiện `mouseDown` giúp bảo vệ vùng bôi đen của người dùng không bị mất tiêu điểm khi thao tác với các nút trên menu.
+  - Thuật toán chống tràn màn hình (Collision Prevention): Tự động tính toán vị trí hiển thị an toàn theo biên màn hình, hỗ trợ đóng nhanh bằng phím `Escape` hoặc khi click ra ngoài.
+- **Lưu và Phục hồi định dạng lề trang & font chữ theo từng mẫu vào Kho mẫu & Sao lưu (.JSON):**
+  - Mở rộng cấu trúc `SavedTemplateItem` để lưu kèm `settings` (fontId, fontSize, lineHeight, preserveOriginalFormat, pageMargin, customMargins, originalMargins).
+  - Tự động gắn kèm cấu hình lề và font khi lưu mẫu từ trình soạn thảo.
+  - Hiển thị trực quan thông số lề (mm) và font/cỡ chữ dưới dạng huy hiệu (Badges) trong danh sách mẫu của hộp thoại Kho mẫu.
+  - Khi người dùng nạp lại mẫu đã lưu hoặc nhập khẩu file JSON sao lưu, hệ thống sẽ tự động khôi phục chính xác thông số lề (kể cả lề tùy chỉnh mm 5/5/20/5) và font chữ của mẫu đó, đồng bộ tức thì lên trang A4 và file Word xuất ra.
+
+---
+
 ## [1.0.7] - 2026-10-16
 
 ### Sửa lỗi & Nâng cấp (Fixed & Enhanced)
