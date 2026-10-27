@@ -42,7 +42,7 @@ export const APP_META: AppMeta = {
   shortName: "Merge Word",
   description: "Chỉnh sửa và trộn thư",
   appCode: "NAMNSMERGE",
-  version: "1.0.9",
+  version: "1.0.10",
   date: "2026-10-27",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
@@ -50,6 +50,17 @@ export const APP_META: AppMeta = {
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.10",
+      date: "2026-10-27",
+      changes: [
+        "Tích hợp trọn bộ Menu chọn đường viền bảng chuẩn Microsoft Word (Word Borders Menu & Engine): Hỗ trợ đầy đủ 15 tùy chọn viền với biểu tượng trực quan y hệt Word (Viền dưới, Viền trên, Viền trái, Viền phải, Không viền, Tất cả viền, Chỉ viền ngoài, Chỉ viền trong, Viền ngang bên trong, Viền dọc bên trong, Đường chéo ô \\ và /, Đường kẻ ngang phân cách, và Tùy biến đường viền Borders and Shading).",
+        "Tùy biến đường viền nâng cao (Borders and Shading): Cho phép lựa chọn kiểu nét viền (Solid, Dashed, Dotted, Double, Groove), độ dày nét (0.5pt đến 3pt) và màu sắc viền tùy chỉnh, áp dụng linh hoạt cho toàn bộ bảng hoặc từng ô đang chọn.",
+        "Chế độ Xem đường lưới mờ khi không viền (View Gridlines chuẩn Word): Hỗ trợ bật/tắt đường lưới nét đứt màu xám nhạt trong chế độ soạn thảo giúp dễ dàng quan sát, căn chỉnh và nhập liệu trong ô khi bảng chọn No Border (tự động ẩn khi in hoặc xuất file).",
+        "Mở rộng toàn diện các tính năng thao tác cấu trúc bảng: Tích hợp Gộp ô (Merge Cells - gộp sang phải, gộp xuống dưới) & Tách ô (Split Cell); Phân bố đều độ rộng các cột (Distribute Columns); Căn vị trí toàn bảng trên trang A4 (Trái, Giữa, Phải); Tùy chỉnh khoảng đệm ô (Cell Padding: Hẹp 2px cho biểu mẫu y tế, Chuẩn 5px, Rộng 9px); Tự động co giãn bảng (AutoFit); Bật/tắt dòng tiêu đề Header (<th>) và màu xen kẽ dòng (Zebra Striping).",
+        "Đồng bộ hóa trên cả Toolbar chính, Menu Công cụ Bảng phân tab chuyên nghiệp (4 Tab: Đường viền, Dòng & Cột, Gộp & Căn, Định dạng) và Menu ngữ cảnh chuột phải (Context Menu)."
+      ]
+    },
     {
       version: "1.0.9",
       date: "2026-10-27",

@@ -47,6 +47,7 @@ import { VIETNAMESE_FONTS } from '../lib/fonts';
 import { renderMergedHtml, getEffectiveMargin } from '../lib/docxHelper';
 import { ThemeGradient } from '../lib/theme';
 import { WordColorPicker } from './WordColorPicker';
+import { WordBorderPicker, BorderPresetType, BorderCustomOptions } from './WordBorderPicker';
 
 export interface DocumentEditorHandle {
   insertTag: (tag: string) => void;
@@ -125,6 +126,10 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
   const [tempMargins, setTempMargins] = useState<DocumentMargin>(
     settings.customMargins || { top: 20, bottom: 20, left: 30, right: 15 }
   );
+
+  // Trạng thái Bảng biểu chuẩn Microsoft Word
+  const [showGridlines, setShowGridlines] = useState(true);
+  const [activeTableTab, setActiveTableTab] = useState<'borders' | 'rowsCols' | 'mergeAlign' | 'style'>('borders');
 
   // === HỆ THỐNG CUSTOM HISTORY STACK (UNDO / REDO) ĐỘC LẬP 100% ===
   const historyStackRef = useRef<string[]>([]);
@@ -790,16 +795,391 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     }
   };
 
-  const handleSetTableBorders = (type: 'solid' | 'dashed' | 'none') => {
-    const found = getClosestCellAndTable();
-    if (!found) {
-      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần định dạng viền.');
+  // === XỬ LÝ VIỀN BẢNG CHUẨN MICROSOFT WORD (BORDERS ENGINE) ===
+  const handleApplyBorder = (type: BorderPresetType, options?: BorderCustomOptions) => {
+    if (type === 'hr') {
+      execFormat('insertHorizontalRule');
       return;
     }
-    const borderStyle = type === 'solid' ? '1px solid #000' : type === 'dashed' ? '1px dashed #666' : 'none';
-    found.table.style.border = type === 'solid' ? '1.5px solid #000' : type === 'dashed' ? '1.5px dashed #666' : 'none';
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần thao tác viền.');
+      return;
+    }
+    const { table, cell } = found;
+    const borderStyle = options?.style || 'solid';
+    const borderWidth = options?.width || '1px';
+    const borderColor = options?.color || '#000000';
+    const borderCss = `${borderWidth} ${borderStyle} ${borderColor}`;
+    const applyTo = options?.applyTo || 'table';
+
+    if (type === 'all') {
+      table.style.border = borderCss;
+      table.style.borderCollapse = 'collapse';
+      table.querySelectorAll('td, th').forEach(c => {
+        const el = c as HTMLElement;
+        el.style.border = borderCss;
+        el.style.borderTop = borderCss;
+        el.style.borderBottom = borderCss;
+        el.style.borderLeft = borderCss;
+        el.style.borderRight = borderCss;
+      });
+    } else if (type === 'none') {
+      table.style.border = 'none';
+      table.style.borderCollapse = 'collapse';
+      table.querySelectorAll('td, th').forEach(c => {
+        const el = c as HTMLElement;
+        el.style.border = 'none';
+        el.style.borderTop = 'none';
+        el.style.borderBottom = 'none';
+        el.style.borderLeft = 'none';
+        el.style.borderRight = 'none';
+        el.style.backgroundImage = 'none';
+      });
+    } else if (type === 'outside') {
+      table.style.border = borderCss;
+      table.style.borderCollapse = 'collapse';
+      const rows = Array.from(table.rows);
+      const rowCount = rows.length;
+      rows.forEach((r, rIdx) => {
+        const cells = Array.from(r.cells);
+        const cellCount = cells.length;
+        cells.forEach((c, cIdx) => {
+          const el = c as HTMLElement;
+          el.style.border = 'none';
+          el.style.borderTop = rIdx === 0 ? borderCss : 'none';
+          el.style.borderBottom = rIdx === rowCount - 1 ? borderCss : 'none';
+          el.style.borderLeft = cIdx === 0 ? borderCss : 'none';
+          el.style.borderRight = cIdx === cellCount - 1 ? borderCss : 'none';
+        });
+      });
+    } else if (type === 'inside') {
+      table.style.border = 'none';
+      table.style.borderCollapse = 'collapse';
+      const rows = Array.from(table.rows);
+      rows.forEach((r, rIdx) => {
+        const cells = Array.from(r.cells);
+        cells.forEach((c, cIdx) => {
+          const el = c as HTMLElement;
+          el.style.border = 'none';
+          el.style.borderTop = rIdx > 0 ? borderCss : 'none';
+          el.style.borderLeft = cIdx > 0 ? borderCss : 'none';
+          el.style.borderBottom = 'none';
+          el.style.borderRight = 'none';
+        });
+      });
+    } else if (type === 'inside_h') {
+      table.style.border = 'none';
+      table.style.borderCollapse = 'collapse';
+      const rows = Array.from(table.rows);
+      rows.forEach((r, rIdx) => {
+        const cells = Array.from(r.cells);
+        cells.forEach(c => {
+          const el = c as HTMLElement;
+          el.style.border = 'none';
+          el.style.borderTop = rIdx > 0 ? borderCss : 'none';
+          el.style.borderBottom = 'none';
+          el.style.borderLeft = 'none';
+          el.style.borderRight = 'none';
+        });
+      });
+    } else if (type === 'inside_v') {
+      table.style.border = 'none';
+      table.style.borderCollapse = 'collapse';
+      const rows = Array.from(table.rows);
+      rows.forEach(r => {
+        const cells = Array.from(r.cells);
+        cells.forEach((c, cIdx) => {
+          const el = c as HTMLElement;
+          el.style.border = 'none';
+          el.style.borderLeft = cIdx > 0 ? borderCss : 'none';
+          el.style.borderRight = 'none';
+          el.style.borderTop = 'none';
+          el.style.borderBottom = 'none';
+        });
+      });
+    } else if (type === 'bottom') {
+      if (cell && applyTo === 'cell') {
+        const current = cell.style.borderBottom;
+        cell.style.borderBottom = current && current !== 'none' ? 'none' : borderCss;
+      } else {
+        const lastRow = table.rows[table.rows.length - 1];
+        if (lastRow) {
+          Array.from(lastRow.cells).forEach(c => {
+            (c as HTMLElement).style.borderBottom = borderCss;
+          });
+        }
+      }
+    } else if (type === 'top') {
+      if (cell && applyTo === 'cell') {
+        const current = cell.style.borderTop;
+        cell.style.borderTop = current && current !== 'none' ? 'none' : borderCss;
+      } else {
+        const firstRow = table.rows[0];
+        if (firstRow) {
+          Array.from(firstRow.cells).forEach(c => {
+            (c as HTMLElement).style.borderTop = borderCss;
+          });
+        }
+      }
+    } else if (type === 'left') {
+      if (cell && applyTo === 'cell') {
+        const current = cell.style.borderLeft;
+        cell.style.borderLeft = current && current !== 'none' ? 'none' : borderCss;
+      } else {
+        Array.from(table.rows).forEach(r => {
+          if (r.cells[0]) (r.cells[0] as HTMLElement).style.borderLeft = borderCss;
+        });
+      }
+    } else if (type === 'right') {
+      if (cell && applyTo === 'cell') {
+        const current = cell.style.borderRight;
+        cell.style.borderRight = current && current !== 'none' ? 'none' : borderCss;
+      } else {
+        Array.from(table.rows).forEach(r => {
+          const lastCell = r.cells[r.cells.length - 1];
+          if (lastCell) (lastCell as HTMLElement).style.borderRight = borderCss;
+        });
+      }
+    } else if (type === 'diagonal_down') {
+      if (cell) {
+        if (cell.style.backgroundImage && cell.style.backgroundImage.includes('linear-gradient')) {
+          cell.style.backgroundImage = 'none';
+        } else {
+          cell.style.backgroundImage = `linear-gradient(to bottom right, transparent calc(50% - 0.75px), ${borderColor}, transparent calc(50% + 0.75px))`;
+        }
+      }
+    } else if (type === 'diagonal_up') {
+      if (cell) {
+        if (cell.style.backgroundImage && cell.style.backgroundImage.includes('linear-gradient')) {
+          cell.style.backgroundImage = 'none';
+        } else {
+          cell.style.backgroundImage = `linear-gradient(to top right, transparent calc(50% - 0.75px), ${borderColor}, transparent calc(50% + 0.75px))`;
+        }
+      }
+    }
+
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
+  };
+
+  const handleSetTableBorders = (type: 'solid' | 'dashed' | 'none') => {
+    handleApplyBorder(type === 'none' ? 'none' : 'all', {
+      style: type === 'dashed' ? 'dashed' : 'solid',
+      width: '1px',
+      color: '#000000',
+      applyTo: 'table'
+    });
+  };
+
+  // === CÁC THAO TÁC CẤU TRÚC VÀ BỐ CỤC BẢNG NÂNG CAO ===
+  const handleMergeCellRight = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần gộp.');
+      return;
+    }
+    const { cell, row } = found;
+    const cellIdx = cell.cellIndex;
+    if (cellIdx >= row.cells.length - 1) {
+      alert('Không có ô liền kề bên phải để gộp.');
+      return;
+    }
+    const nextCell = row.cells[cellIdx + 1];
+    const currentColSpan = parseInt(cell.getAttribute('colspan') || '1', 10);
+    const nextColSpan = parseInt(nextCell.getAttribute('colspan') || '1', 10);
+    const nextContent = nextCell.innerHTML.trim();
+    if (nextContent && nextContent !== '<p>&nbsp;</p>' && nextContent !== '<p><br></p>' && nextContent !== '&nbsp;') {
+      cell.innerHTML = cell.innerHTML.trim() + ' ' + nextContent;
+    }
+    cell.setAttribute('colspan', (currentColSpan + nextColSpan).toString());
+    row.deleteCell(cellIdx + 1);
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
+  };
+
+  const handleMergeCellDown = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần gộp.');
+      return;
+    }
+    const { cell, row, table } = found;
+    const rIdx = row.rowIndex;
+    if (rIdx >= table.rows.length - 1) {
+      alert('Không có ô nằm ở dòng phía dưới để gộp.');
+      return;
+    }
+    const nextRow = table.rows[rIdx + 1];
+    const cellIdx = cell.cellIndex;
+    if (cellIdx >= nextRow.cells.length) {
+      alert('Không tìm thấy ô tương ứng ở dòng dưới.');
+      return;
+    }
+    const belowCell = nextRow.cells[cellIdx];
+    const currentRowSpan = parseInt(cell.getAttribute('rowspan') || '1', 10);
+    const belowRowSpan = parseInt(belowCell.getAttribute('rowspan') || '1', 10);
+    const belowContent = belowCell.innerHTML.trim();
+    if (belowContent && belowContent !== '<p>&nbsp;</p>' && belowContent !== '<p><br></p>' && belowContent !== '&nbsp;') {
+      cell.innerHTML = cell.innerHTML.trim() + '<br>' + belowContent;
+    }
+    cell.setAttribute('rowspan', (currentRowSpan + belowRowSpan).toString());
+    nextRow.deleteCell(cellIdx);
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
+  };
+
+  const handleSplitCell = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần tách.');
+      return;
+    }
+    const { cell, row, table } = found;
+    const colSpan = parseInt(cell.getAttribute('colspan') || '1', 10);
+    const rowSpan = parseInt(cell.getAttribute('rowspan') || '1', 10);
+
+    if (colSpan > 1) {
+      cell.setAttribute('colspan', (colSpan - 1).toString());
+      if (colSpan - 1 === 1) cell.removeAttribute('colspan');
+      const newCell = row.insertCell(cell.cellIndex + 1);
+      newCell.style.border = cell.style.border || '1px solid #000';
+      newCell.style.padding = cell.style.padding || '5px 8px';
+      newCell.style.verticalAlign = cell.style.verticalAlign || 'middle';
+      newCell.innerHTML = '<p>&nbsp;</p>';
+    } else if (rowSpan > 1) {
+      cell.setAttribute('rowspan', (rowSpan - 1).toString());
+      if (rowSpan - 1 === 1) cell.removeAttribute('rowspan');
+      const targetRow = table.rows[row.rowIndex + 1];
+      if (targetRow) {
+        const newCell = targetRow.insertCell(Math.min(cell.cellIndex, targetRow.cells.length));
+        newCell.style.border = cell.style.border || '1px solid #000';
+        newCell.style.padding = cell.style.padding || '5px 8px';
+        newCell.style.verticalAlign = cell.style.verticalAlign || 'middle';
+        newCell.innerHTML = '<p>&nbsp;</p>';
+      }
+    } else {
+      const newCell = row.insertCell(cell.cellIndex + 1);
+      newCell.style.border = cell.style.border || '1px solid #000';
+      newCell.style.padding = cell.style.padding || '5px 8px';
+      newCell.style.verticalAlign = cell.style.verticalAlign || 'middle';
+      newCell.innerHTML = '<p>&nbsp;</p>';
+    }
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
+  };
+
+  const handleDistributeColumns = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần chia đều cột.');
+      return;
+    }
+    const { table } = found;
+    let maxCols = 0;
+    Array.from(table.rows).forEach(r => {
+      let count = 0;
+      Array.from(r.cells).forEach(c => {
+        count += parseInt(c.getAttribute('colspan') || '1', 10);
+      });
+      if (count > maxCols) maxCols = count;
+    });
+    if (maxCols === 0) return;
+    const colPct = (100 / maxCols).toFixed(2) + '%';
+    table.style.width = '100%';
+    Array.from(table.rows).forEach(r => {
+      Array.from(r.cells).forEach(c => {
+        const span = parseInt(c.getAttribute('colspan') || '1', 10);
+        (c as HTMLElement).style.width = (parseFloat(colPct) * span).toFixed(2) + '%';
+      });
+    });
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
+  };
+
+  const handleAlignTable = (align: 'left' | 'center' | 'right') => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng cần căn lề.');
+      return;
+    }
+    const { table } = found;
+    if (align === 'left') {
+      table.style.marginLeft = '0px';
+      table.style.marginRight = 'auto';
+    } else if (align === 'center') {
+      table.style.marginLeft = 'auto';
+      table.style.marginRight = 'auto';
+    } else if (align === 'right') {
+      table.style.marginLeft = 'auto';
+      table.style.marginRight = '0px';
+    }
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
+  };
+
+  const handleSetTableWidth = (width: '100%' | 'auto' | '90%' | '80%') => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng.');
+      return;
+    }
+    found.table.style.width = width;
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
+  };
+
+  const handleSetCellPadding = (padding: 'compact' | 'normal' | 'relaxed') => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng.');
+      return;
+    }
+    const padVal = padding === 'compact' ? '2px 5px' : padding === 'relaxed' ? '9px 12px' : '5px 8px';
     found.table.querySelectorAll('td, th').forEach(c => {
-      (c as HTMLElement).style.border = borderStyle;
+      (c as HTMLElement).style.padding = padVal;
+    });
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
+  };
+
+  const handleToggleHeaderRow = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng.');
+      return;
+    }
+    const firstRow = found.table.rows[0];
+    if (!firstRow) return;
+    const isHeader = firstRow.cells[0]?.tagName.toLowerCase() === 'th';
+    const newRow = found.table.insertRow(0);
+    Array.from(firstRow.cells).forEach(oldCell => {
+      const tagName = isHeader ? 'td' : 'th';
+      const newCell = document.createElement(tagName);
+      newCell.innerHTML = oldCell.innerHTML;
+      newCell.setAttribute('style', oldCell.getAttribute('style') || '');
+      if (!isHeader) {
+        newCell.style.backgroundColor = '#f1f5f9';
+        newCell.style.fontWeight = 'bold';
+        newCell.style.textAlign = 'center';
+      } else {
+        newCell.style.removeProperty('background-color');
+        newCell.style.fontWeight = 'normal';
+      }
+      const colSpan = oldCell.getAttribute('colspan');
+      if (colSpan) newCell.setAttribute('colspan', colSpan);
+      const rowSpan = oldCell.getAttribute('rowspan');
+      if (rowSpan) newCell.setAttribute('rowspan', rowSpan);
+      newRow.appendChild(newCell);
+    });
+    firstRow.remove();
+    if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
+  };
+
+  const handleToggleZebraStriping = () => {
+    const found = getClosestCellAndTable();
+    if (!found) {
+      alert('Vui lòng nhấp con trỏ chuột vào trong một ô của bảng.');
+      return;
+    }
+    Array.from(found.table.rows).forEach((r, idx) => {
+      if (idx === 0 && r.cells[0]?.tagName.toLowerCase() === 'th') return;
+      const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+      Array.from(r.cells).forEach(c => {
+        (c as HTMLElement).style.backgroundColor = bg;
+      });
     });
     if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
   };
@@ -1282,6 +1662,15 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
 
           <span className="w-px h-4 bg-slate-200 mx-1"></span>
 
+          {/* Nút Viền bảng kiểu Microsoft Word trực tiếp trên Toolbar */}
+          <WordBorderPicker
+            onApplyBorder={handleApplyBorder}
+            onToggleGridlines={() => setShowGridlines(prev => !prev)}
+            showGridlines={showGridlines}
+            title="Đường viền bảng (Borders - Microsoft Word)"
+            dropdownAlign="left"
+          />
+
           {/* BỘ CÔNG CỤ BẢNG BIỂU (TABLE SUITE) */}
           <div className="relative" ref={tableMenuRef}>
             <button
@@ -1299,10 +1688,10 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             </button>
 
             {isTableMenuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-slate-300 rounded-2xl shadow-2xl p-3.5 w-84 sm:w-96 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-200px)] min-h-[300px] overflow-y-auto space-y-3 animate-in fade-in zoom-in-95 duration-100 overscroll-contain">
-                <div className="sticky -top-3.5 -mt-3.5 -mx-3.5 p-3.5 bg-white/95 backdrop-blur-xs border-b border-slate-200 flex items-center justify-between z-10 shadow-2xs">
+              <div className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-slate-300 rounded-2xl shadow-2xl p-3.5 w-88 sm:w-96 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-200px)] min-h-[340px] overflow-y-auto space-y-3 animate-in fade-in zoom-in-95 duration-100 overscroll-contain">
+                <div className="sticky -top-3.5 -mt-3.5 -mx-3.5 p-3 bg-white/95 backdrop-blur-xs border-b border-slate-200 flex items-center justify-between z-10 shadow-2xs">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <TableIcon className="w-4 h-4 text-blue-600" /> Cấu hình &amp; Định dạng Bảng
+                    <TableIcon className="w-4 h-4 text-blue-600" /> Cấu hình &amp; Tùy chỉnh Bảng biểu
                   </span>
                   <button
                     onClick={() => setIsTableMenuOpen(false)}
@@ -1313,195 +1702,391 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                   </button>
                 </div>
 
-                {/* 1. Thêm bảng mới */}
-                <div>
-                  <span className="text-[11px] font-semibold text-slate-600 block mb-1">Tạo bảng mới:</span>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => { insertTable(3, 3); setIsTableMenuOpen(false); }}
-                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium border border-slate-200"
-                    >
-                      Bảng 3x3
-                    </button>
-                    <button
-                      onClick={() => { insertTable(4, 5); setIsTableMenuOpen(false); }}
-                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium border border-slate-200"
-                    >
-                      Bảng 4x5
-                    </button>
-                    <button
-                      onClick={() => { setIsCustomTableModalOpen(true); setIsTableMenuOpen(false); }}
-                      className="px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold border border-blue-200 ml-auto"
-                    >
-                      Tùy chọn...
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. Thao tác dòng (Row) */}
-                <div className="border-t border-slate-100 pt-2.5">
-                  <span className="text-[11px] font-semibold text-slate-600 block mb-1 flex items-center gap-1">
-                    <Rows className="w-3.5 h-3.5 text-slate-500" /> Thao tác dòng:
-                  </span>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      onClick={handleInsertRowAbove}
-                      className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
-                      title="Thêm 1 dòng nằm ngay phía trên ô đang chọn"
-                    >
-                      + Dòng trên
-                    </button>
-                    <button
-                      onClick={handleInsertRowBelow}
-                      className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
-                      title="Thêm 1 dòng nằm ngay phía dưới ô đang chọn"
-                    >
-                      + Dòng dưới
-                    </button>
-                    <button
-                      onClick={handleDeleteRow}
-                      className="p-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-[11px] font-semibold border border-rose-200 text-center"
-                      title="Xóa dòng đang chọn"
-                    >
-                      Xóa dòng
-                    </button>
-                  </div>
-                </div>
-
-                {/* 3. Thao tác cột (Column) */}
-                <div className="border-t border-slate-100 pt-2.5">
-                  <span className="text-[11px] font-semibold text-slate-600 block mb-1 flex items-center gap-1">
-                    <Columns className="w-3.5 h-3.5 text-slate-500" /> Thao tác cột:
-                  </span>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      onClick={handleInsertColLeft}
-                      className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
-                      title="Thêm 1 cột bên trái ô đang chọn"
-                    >
-                      + Cột trái
-                    </button>
-                    <button
-                      onClick={handleInsertColRight}
-                      className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
-                      title="Thêm 1 cột bên phải ô đang chọn"
-                    >
-                      + Cột phải
-                    </button>
-                    <button
-                      onClick={handleDeleteCol}
-                      className="p-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-[11px] font-semibold border border-rose-200 text-center"
-                      title="Xóa cột đang chọn"
-                    >
-                      Xóa cột
-                    </button>
-                  </div>
-                </div>
-
-                {/* 4. Căn lề ngang nội dung trong ô */}
-                <div className="border-t border-slate-100 pt-2.5">
-                  <span className="text-[11px] font-semibold text-slate-600 block mb-1">Căn lề ngang ô hiện tại:</span>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleAlignCell('left')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
-                      title="Canh trái ô"
-                    >
-                      Trái
-                    </button>
-                    <button
-                      onClick={() => handleAlignCell('center')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center font-bold"
-                      title="Canh giữa ô"
-                    >
-                      Giữa
-                    </button>
-                    <button
-                      onClick={() => handleAlignCell('right')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
-                      title="Canh phải ô"
-                    >
-                      Phải
-                    </button>
-                    <button
-                      onClick={() => handleAlignCell('justify')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
-                      title="Đều 2 bên"
-                    >
-                      Đều
-                    </button>
-                  </div>
-                </div>
-
-                {/* 5. Căn lề dọc trong ô */}
-                <div className="border-t border-slate-100 pt-2.5">
-                  <span className="text-[11px] font-semibold text-slate-600 block mb-1">Căn lề dọc ô:</span>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleValignCell('top')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
-                      title="Căn đỉnh ô"
-                    >
-                      Đỉnh (Top)
-                    </button>
-                    <button
-                      onClick={() => handleValignCell('middle')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center font-bold"
-                      title="Căn giữa dọc"
-                    >
-                      Giữa (Middle)
-                    </button>
-                    <button
-                      onClick={() => handleValignCell('bottom')}
-                      className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
-                      title="Căn đáy ô"
-                    >
-                      Đáy (Bottom)
-                    </button>
-                  </div>
-                </div>
-
-                {/* 6. Màu nền ô & Viền bảng */}
-                <div className="border-t border-slate-100 pt-2.5 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-semibold text-slate-600">Nền ô:</span>
-                    <WordColorPicker
-                      type="cell"
-                      currentColor={cellBgColor}
-                      onSelectColor={(c) => handleCellBgColorChange(c)}
-                      title="Chọn màu nền ô bảng"
-                      dropdownAlign="left"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleSetTableBorders('solid')}
-                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-semibold border border-slate-200"
-                      title="Viền nét liền chuẩn 1px"
-                    >
-                      Viền nét liền
-                    </button>
-                    <button
-                      onClick={() => handleSetTableBorders('none')}
-                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200"
-                      title="Ẩn đường viền bảng"
-                    >
-                      Bỏ viền
-                    </button>
-                  </div>
-                </div>
-
-                {/* 7. Xóa toàn bộ bảng */}
-                <div className="border-t border-slate-100 pt-2.5 flex justify-end">
+                {/* Thanh điều hướng 4 Tab chuyên nghiệp */}
+                <div className="grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-semibold border border-slate-200">
                   <button
-                    onClick={handleDeleteTable}
-                    className="w-full justify-center px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-xs font-semibold border border-rose-200 inline-flex items-center gap-1.5 transition-colors shadow-2xs"
+                    type="button"
+                    onClick={() => setActiveTableTab('borders')}
+                    className={`py-1 rounded-lg transition-all text-center ${
+                      activeTableTab === 'borders' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                    }`}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Xóa toàn bộ bảng này</span>
+                    Đường viền
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTableTab('rowsCols')}
+                    className={`py-1 rounded-lg transition-all text-center ${
+                      activeTableTab === 'rowsCols' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Dòng &amp; Cột
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTableTab('mergeAlign')}
+                    className={`py-1 rounded-lg transition-all text-center ${
+                      activeTableTab === 'mergeAlign' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Gộp &amp; Căn
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTableTab('style')}
+                    className={`py-1 rounded-lg transition-all text-center ${
+                      activeTableTab === 'style' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Định dạng
                   </button>
                 </div>
+
+                {/* NỘI DUNG TAB 1: ĐƯỜNG VIỀN CHUẨN WORD (BORDERS) */}
+                {activeTableTab === 'borders' && (
+                  <div className="space-y-2.5 animate-in fade-in duration-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-700">Menu chọn viền Word:</span>
+                      <WordBorderPicker
+                        onApplyBorder={handleApplyBorder}
+                        onToggleGridlines={() => setShowGridlines(prev => !prev)}
+                        showGridlines={showGridlines}
+                        title="Bảng chọn viền đầy đủ kiểu Word"
+                        dropdownAlign="right"
+                      />
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-semibold text-slate-500 block mb-1">Gán viền nhanh:</span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleApplyBorder('all')}
+                          className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-semibold border border-slate-200 text-slate-800 text-left flex items-center justify-between"
+                        >
+                          <span>Tất cả viền (All)</span>
+                          <span className="text-[10px] text-slate-400">田</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyBorder('none')}
+                          className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-semibold border border-rose-200 text-left flex items-center justify-between"
+                        >
+                          <span>Bỏ viền (None)</span>
+                          <span className="text-[10px] text-rose-400">✕</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyBorder('outside')}
+                          className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium border border-slate-200 text-slate-800 text-left"
+                        >
+                          Chỉ viền ngoài
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyBorder('inside')}
+                          className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium border border-slate-200 text-slate-800 text-left"
+                        >
+                          Chỉ viền trong
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyBorder('top')}
+                          className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-slate-700"
+                        >
+                          Viền trên
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyBorder('bottom')}
+                          className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-slate-700"
+                        >
+                          Viền dưới
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyBorder('inside_h')}
+                          className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-slate-700"
+                        >
+                          Viền ngang trong (APA)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyBorder('inside_v')}
+                          className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-slate-700"
+                        >
+                          Viền dọc trong
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2 flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-600">Đường lưới hỗ trợ (Gridlines):</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowGridlines(!showGridlines)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                          showGridlines
+                            ? 'bg-sky-50 text-sky-700 border-sky-300'
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        {showGridlines ? 'Đang bật lưới' : 'Đang tắt'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* NỘI DUNG TAB 2: DÒNG & CỘT (ROWS & COLS) */}
+                {activeTableTab === 'rowsCols' && (
+                  <div className="space-y-2.5 animate-in fade-in duration-100">
+                    <div>
+                      <span className="text-[11px] font-semibold text-slate-600 block mb-1 flex items-center gap-1">
+                        <Rows className="w-3.5 h-3.5 text-slate-500" /> Thao tác dòng:
+                      </span>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleInsertRowAbove}
+                          className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
+                        >
+                          + Dòng trên
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleInsertRowBelow}
+                          className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
+                        >
+                          + Dòng dưới
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDeleteRow}
+                          className="p-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-[11px] font-semibold border border-rose-200 text-center"
+                        >
+                          Xóa dòng
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2">
+                      <span className="text-[11px] font-semibold text-slate-600 block mb-1 flex items-center gap-1">
+                        <Columns className="w-3.5 h-3.5 text-slate-500" /> Thao tác cột:
+                      </span>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleInsertColLeft}
+                          className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
+                        >
+                          + Cột trái
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleInsertColRight}
+                          className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
+                        >
+                          + Cột phải
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDeleteCol}
+                          className="p-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-[11px] font-semibold border border-rose-200 text-center"
+                        >
+                          Xóa cột
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleDistributeColumns}
+                        className="w-full py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold border border-indigo-200 flex items-center justify-center gap-1.5 transition-colors"
+                        title="Chia đều độ rộng tất cả các cột trong bảng"
+                      >
+                        <Columns className="w-3.5 h-3.5" />
+                        <span>Phân bố đều độ rộng các cột</span>
+                      </button>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2">
+                      <span className="text-[11px] font-semibold text-slate-600 block mb-1">Tạo bảng mới:</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => { insertTable(3, 3); setIsTableMenuOpen(false); }}
+                          className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium border border-slate-200"
+                        >
+                          3x3
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { insertTable(4, 5); setIsTableMenuOpen(false); }}
+                          className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium border border-slate-200"
+                        >
+                          4x5
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setIsCustomTableModalOpen(true); setIsTableMenuOpen(false); }}
+                          className="px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold border border-blue-200 ml-auto"
+                        >
+                          Tùy chọn...
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* NỘI DUNG TAB 3: GỘP Ô & CĂN LỀ (MERGE & ALIGN) */}
+                {activeTableTab === 'mergeAlign' && (
+                  <div className="space-y-2.5 animate-in fade-in duration-100">
+                    <div>
+                      <span className="text-[11px] font-semibold text-slate-600 block mb-1">Gộp ô &amp; Tách ô:</span>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleMergeCellRight}
+                          className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
+                          title="Gộp ô hiện tại với ô liền kề bên phải"
+                        >
+                          Gộp sang phải
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleMergeCellDown}
+                          className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
+                          title="Gộp ô hiện tại với ô ở dòng dưới"
+                        >
+                          Gộp xuống dưới
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSplitCell}
+                          className="p-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-[11px] font-semibold border border-blue-200 text-center"
+                          title="Tách ô đã gộp trở lại hoặc chia đôi cột"
+                        >
+                          Tách ô
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2">
+                      <span className="text-[11px] font-semibold text-slate-600 block mb-1">Căn ngang nội dung ô:</span>
+                      <div className="flex items-center gap-1.5">
+                        <button type="button" onClick={() => handleAlignCell('left')} className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center">Trái</button>
+                        <button type="button" onClick={() => handleAlignCell('center')} className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center font-bold">Giữa</button>
+                        <button type="button" onClick={() => handleAlignCell('right')} className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center">Phải</button>
+                        <button type="button" onClick={() => handleAlignCell('justify')} className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center">Đều</button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2">
+                      <span className="text-[11px] font-semibold text-slate-600 block mb-1">Căn dọc ô:</span>
+                      <div className="flex items-center gap-1.5">
+                        <button type="button" onClick={() => handleValignCell('top')} className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center">Đỉnh (Top)</button>
+                        <button type="button" onClick={() => handleValignCell('middle')} className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center font-bold">Giữa (Middle)</button>
+                        <button type="button" onClick={() => handleValignCell('bottom')} className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center">Đáy (Bottom)</button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2">
+                      <span className="text-[11px] font-semibold text-slate-600 block mb-1">Căn vị trí bảng trên trang A4:</span>
+                      <div className="flex items-center gap-1.5">
+                        <button type="button" onClick={() => handleAlignTable('left')} className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center">Bảng Trái</button>
+                        <button type="button" onClick={() => handleAlignTable('center')} className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center font-bold">Bảng Giữa</button>
+                        <button type="button" onClick={() => handleAlignTable('right')} className="flex-1 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center">Bảng Phải</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* NỘI DUNG TAB 4: ĐỊNH DẠNG & PHONG CÁCH (STYLE) */}
+                {activeTableTab === 'style' && (
+                  <div className="space-y-2.5 animate-in fade-in duration-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-600">Màu nền ô (Cell Shading):</span>
+                      <WordColorPicker
+                        type="cell"
+                        currentColor={cellBgColor}
+                        onSelectColor={(c) => handleCellBgColorChange(c)}
+                        title="Chọn màu nền ô bảng"
+                        dropdownAlign="right"
+                      />
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2">
+                      <span className="text-[11px] font-semibold text-slate-600 block mb-1">Khoảng đệm ô (Cell Padding):</span>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleSetCellPadding('compact')}
+                          className="p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
+                          title="Hẹp (2px 5px) - Tiết kiệm diện tích cho phiếu khám, biểu mẫu"
+                        >
+                          Hẹp (2px)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetCellPadding('normal')}
+                          className="p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-bold border border-slate-200 text-center"
+                          title="Tiêu chuẩn (5px 8px)"
+                        >
+                          Chuẩn (5px)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetCellPadding('relaxed')}
+                          className="p-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] border border-slate-200 text-center"
+                          title="Rộng rãi (9px 12px)"
+                        >
+                          Rộng (9px)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2">
+                      <span className="text-[11px] font-semibold text-slate-600 block mb-1">Chiều rộng bảng:</span>
+                      <div className="grid grid-cols-4 gap-1">
+                        <button type="button" onClick={() => handleSetTableWidth('100%')} className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] font-bold border border-slate-200 text-center">100%</button>
+                        <button type="button" onClick={() => handleSetTableWidth('auto')} className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center">AutoFit</button>
+                        <button type="button" onClick={() => handleSetTableWidth('90%')} className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center">90%</button>
+                        <button type="button" onClick={() => handleSetTableWidth('80%')} className="p-1 bg-slate-50 hover:bg-slate-100 rounded text-[11px] border border-slate-200 text-center">80%</button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleToggleHeaderRow}
+                        className="flex-1 py-1 px-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
+                        title="Chuyển dòng 1 thành dòng tiêu đề bảng (th)"
+                      >
+                        Dòng Tiêu đề (Header)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleToggleZebraStriping}
+                        className="flex-1 py-1 px-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200 text-center"
+                        title="Tô màu xen kẽ các hàng chẵn/lẻ"
+                      >
+                        Sọc xen kẽ (Zebra)
+                      </button>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleDeleteTable}
+                        className="w-full justify-center px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-xs font-semibold border border-rose-200 inline-flex items-center gap-1.5 transition-colors shadow-2xs"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Xóa toàn bộ bảng này</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1747,7 +2332,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             onKeyUp={saveSelection}
             onFocus={saveSelection}
             suppressContentEditableWarning
-            className="document-content outline-none focus:ring-0 min-h-[800px]"
+            className={`document-content outline-none focus:ring-0 min-h-[800px] ${showGridlines ? 'show-table-gridlines' : ''}`}
             style={{
               fontFamily: fontFamilyStyle,
               fontSize: fontSizeStyle,
@@ -2099,6 +2684,37 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                 </div>
               </div>
 
+              {/* Gộp ô & Tách ô */}
+              <div>
+                <span className="text-[10px] font-semibold text-slate-600 block mb-1">Gộp &amp; Tách ô:</span>
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    onClick={() => runTableAction(handleMergeCellRight)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] font-medium border border-slate-200 text-center"
+                    title="Gộp với ô liền kề bên phải"
+                  >
+                    Gộp phải
+                  </button>
+                  <button
+                    onClick={() => runTableAction(handleMergeCellDown)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] font-medium border border-slate-200 text-center"
+                    title="Gộp với ô ở dòng dưới"
+                  >
+                    Gộp dưới
+                  </button>
+                  <button
+                    onClick={() => runTableAction(handleSplitCell)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-[10px] font-semibold border border-blue-200 text-center"
+                    title="Tách ô đã gộp hoặc chia đôi cột"
+                  >
+                    Tách ô
+                  </button>
+                </div>
+              </div>
+
               {/* Căn lề ô */}
               <div className="grid grid-cols-2 gap-1.5">
                 <div>
@@ -2119,10 +2735,10 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                 </div>
               </div>
 
-              {/* Nền ô & Viền */}
-              <div className="flex items-center justify-between gap-1 pt-1 border-t border-indigo-100">
+              {/* Đường viền chuẩn Word & Màu nền ô */}
+              <div className="pt-1 border-t border-indigo-100 flex items-center justify-between gap-1 flex-wrap">
                 <div className="flex items-center gap-1">
-                  <span className="text-[10px] font-semibold text-slate-600">Nền ô:</span>
+                  <span className="text-[10px] font-semibold text-slate-600">Nền:</span>
                   <WordColorPicker
                     type="cell"
                     currentColor={cellBgColor}
@@ -2135,21 +2751,59 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                   />
                 </div>
                 <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-semibold text-slate-600">Viền:</span>
+                  <WordBorderPicker
+                    onApplyBorder={(type, opts) => runTableAction(() => handleApplyBorder(type, opts))}
+                    onToggleGridlines={() => setShowGridlines(!showGridlines)}
+                    showGridlines={showGridlines}
+                    title="Chọn đường viền bảng"
+                    dropdownAlign="right"
+                  />
                   <button
-                    onClick={() => runTableAction(() => handleSetTableBorders('solid'))}
+                    onClick={() => runTableAction(() => handleApplyBorder('all'))}
                     onMouseDown={(e) => e.preventDefault()}
-                    className="px-2 py-0.5 bg-white hover:bg-slate-100 rounded text-[10px] font-semibold border border-slate-200"
+                    className="px-1.5 py-0.5 bg-white hover:bg-slate-100 rounded text-[10px] font-semibold border border-slate-200"
+                    title="Viền nét liền tất cả ô"
                   >
-                    Viền liền
+                    Viền tất cả
                   </button>
                   <button
-                    onClick={() => runTableAction(() => handleSetTableBorders('none'))}
+                    onClick={() => runTableAction(() => handleApplyBorder('none'))}
                     onMouseDown={(e) => e.preventDefault()}
-                    className="px-2 py-0.5 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200"
+                    className="px-1.5 py-0.5 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200 text-rose-600"
+                    title="Bỏ toàn bộ viền bảng"
                   >
                     Bỏ viền
                   </button>
                 </div>
+              </div>
+
+              {/* Phân bố đều cột & Khoảng đệm ô */}
+              <div className="flex items-center gap-1 pt-1 border-t border-indigo-100">
+                <button
+                  onClick={() => runTableAction(handleDistributeColumns)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="flex-1 py-0.5 px-1 bg-white hover:bg-slate-100 rounded text-[10px] font-medium border border-slate-200 text-center"
+                  title="Chia đều chiều rộng tất cả cột"
+                >
+                  Chia đều cột
+                </button>
+                <button
+                  onClick={() => runTableAction(() => handleSetCellPadding('compact'))}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="py-0.5 px-1 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200 text-center"
+                  title="Khoảng đệm ô siêu hẹp 2px"
+                >
+                  Đệm hẹp 2px
+                </button>
+                <button
+                  onClick={() => runTableAction(() => handleSetCellPadding('normal'))}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="py-0.5 px-1 bg-white hover:bg-slate-100 rounded text-[10px] font-bold border border-slate-200 text-center"
+                  title="Khoảng đệm ô tiêu chuẩn 5px"
+                >
+                  Đệm chuẩn 5px
+                </button>
               </div>
 
               {/* Xóa toàn bộ bảng */}

@@ -75,45 +75,51 @@
 
   table {
     border-collapse: collapse;
-    width: 100%;
   }
 
   table td, table th {
-    border: 1px solid #000000 !important;
-    padding: 6px 10px !important;
+    padding: 6px 10px;
   }
 }
 
 /* Định dạng chuẩn Word cho khu vực biên tập & xem trước văn bản */
 .document-content table,
 #printable-document table {
-  width: 100% !important;
-  border-collapse: collapse !important;
-  margin: 12px 0 !important;
-  border: 1px solid #000000 !important;
+  border-collapse: collapse;
+  margin: 12px 0;
 }
 
 .document-content table tr,
 #printable-document table tr {
-  min-height: 26px !important;
+  min-height: 26px;
 }
 
 .document-content table td,
 .document-content table th,
 #printable-document table td,
 #printable-document table th {
-  border: 1px solid #000000 !important;
-  padding: 6px 10px !important;
-  vertical-align: top !important;
-  min-height: 26px !important;
-  min-width: 32px !important;
-  word-break: break-word !important;
+  padding: 6px 10px;
+  vertical-align: top;
+  min-height: 26px;
+  min-width: 32px;
+  word-break: break-word;
 }
 
 .document-content table th,
 #printable-document table th {
-  background-color: #f8fafc !important;
-  font-weight: bold !important;
+  background-color: #f8fafc;
+  font-weight: bold;
+}
+
+/* Đường lưới mờ hỗ trợ khi bảng không viền (View Gridlines chuẩn Word) */
+.show-table-gridlines table[style*="border: none"] td,
+.show-table-gridlines table[style*="border: none"] th,
+.show-table-gridlines td[style*="border: none"],
+.show-table-gridlines td[style*="border: 0"],
+.show-table-gridlines td[style*="border:none"],
+.show-table-gridlines table:not([style*="border"]) td:not([style*="border"]) {
+  outline: 1px dashed #94a3b8 !important;
+  outline-offset: -1px;
 }
 
 .document-content h1 {

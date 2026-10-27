@@ -5,7 +5,7 @@
 > Tuân thủ chuẩn **NSN App Standard** · Offline 100% Client-Side trong bộ nhớ trình duyệt.
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Online-blue?style=flat-square&logo=github)](https://Nsnnam.github.io/nsn-mail-merge-web/)
-[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.9-emerald?style=flat-square)](CHANGELOG.md)
+[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.10-emerald?style=flat-square)](CHANGELOG.md)
 [![Tác giả](https://img.shields.io/badge/Tác_giả-Nguyễn_Sơn_Nam-indigo?style=flat-square)](AUTHORS.md)
 [![Ủng hộ](https://img.shields.io/badge/Mời_cà_phê-BIDV_8855989777-amber?style=flat-square)](SUPPORT.md)
 
@@ -13,7 +13,16 @@
 
 ## 🌟 Tính năng nổi bật
 
-1. **Bảng chọn màu chuẩn phong cách Microsoft Word (Word Style Color Palette)**:
+1. **Bộ tùy chỉnh & Định dạng Bảng biểu chuẩn Microsoft Word (Word Table & Border Suite)**:
+   - **Menu chọn đường viền chuẩn Word**: Tích hợp trọn bộ 15 tùy chọn viền với biểu tượng trực quan y hệt Word (Viền dưới, Viền trên, Viền trái, Viền phải, Không viền, Tất cả viền, Chỉ viền ngoài, Chỉ viền trong, Viền ngang bên trong, Viền dọc bên trong, Đường chéo ô \ và /, Kẻ ngang phân cách, và Xem đường lưới View Gridlines).
+   - **Tùy biến đường viền & Tô bóng (Borders and Shading)**: Lựa chọn kiểu nét (Solid, Dashed, Dotted, Double, Groove), độ dày nét (0.5pt - 3pt), màu viền tùy chọn, áp dụng cho toàn bảng hoặc từng ô đang chọn.
+   - **Gộp ô & Tách ô (Merge & Split Cells)**: Gộp ô sang phải (`colspan`), gộp ô xuống dưới (`rowspan`) và tách ô đã gộp (`split cell`).
+   - **Phân bố đều cột (Distribute Columns)**: Tự động chia đều 100% độ rộng cho các cột trong bảng.
+   - **Căn vị trí bảng & Tự co giãn (AutoFit)**: Căn trái bảng, Căn giữa bảng trên trang A4, Căn phải bảng; điều chỉnh độ rộng bảng 100%, AutoFit, 90%, 80%.
+   - **Khoảng đệm ô (Cell Padding)**: Tùy chỉnh đệm Siêu gọn 2px (tối ưu cho phiếu khám đoàn, bệnh viện nhiều cột hẹp), Chuẩn 5px, Thoáng đãng 9px.
+   - **Dòng tiêu đề Header (`<th>`) & Sọc xen kẽ (Zebra Striping)**: Bật/tắt nhanh chóng.
+   - **Đồng bộ hóa toàn diện**: Nút viền Word trực tiếp trên Toolbar, Menu Công cụ Bảng phân 4 Tab (Đường viền, Dòng & Cột, Gộp & Căn, Định dạng) và Menu ngữ cảnh chuột phải.
+2. **Bảng chọn màu chuẩn phong cách Microsoft Word (Word Style Color Palette)**:
    - **Thay thế hộp thoại màu mặc định của trình duyệt**: Chuyển đổi toàn diện sang giao diện bảng chọn màu dạng ô lưới trực quan, chính xác theo chuẩn văn phòng Microsoft Word.
    - **Đầy đủ 3 chế độ màu**: Màu chữ (Font Color), Màu đánh dấu nền chữ (Highlight Color) và Màu nền ô bảng biểu (Cell Background Color).
    - **Tùy chọn chuẩn Word**: Nút "Tự động (Màu đen #000000)", nút "Không màu (Mặc định / Bỏ màu nền)", Khối 15 màu dạ quang highlight, Khối Màu chủ đề Theme Colors (10 cột x 6 hàng sắc độ), Khối Màu tiêu chuẩn Standard Colors (10 màu) và "Màu khác (More Colors)..." nhập mã Hex hoặc chọn quang phổ tự do.

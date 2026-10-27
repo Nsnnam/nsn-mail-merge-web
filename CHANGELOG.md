@@ -3,6 +3,38 @@
 Tất cả thay đổi đáng chú ý của dự án **Namns Merge Word** được ghi lại tại đây theo chuẩn [Keep a Changelog](https://keepachangelog.com/) và [Semantic Versioning](https://semver.org/).  
 Múi giờ áp dụng: **Asia/Ho_Chi_Minh (GMT+7)**.
 
+## [1.0.10] - 2026-10-27
+
+### Thêm mới & Nâng cấp (Added & Enhanced)
+- **Menu chọn đường viền bảng chuẩn Microsoft Word (Word Borders Menu & Engine):**
+  - Tích hợp trọn bộ 15 tùy chọn đường viền chuẩn Word với icon SVG trực quan sắc nét:
+    1. **Bottom Border**: Viền cạnh dưới ô hoặc dòng cuối bảng.
+    2. **Top Border**: Viền cạnh trên ô hoặc dòng đầu bảng.
+    3. **Left Border**: Viền cạnh trái ô hoặc cột đầu bảng.
+    4. **Right Border**: Viền cạnh phải ô hoặc cột cuối bảng.
+    5. **No Border**: Xóa toàn bộ viền của bảng và các ô (`border: none`).
+    6. **All Borders**: Đặt viền cho tất cả các ô trong bảng bằng nét chuẩn.
+    7. **Outside Borders**: Chỉ viền khung bao quanh ngoài của bảng.
+    8. **Inside Borders**: Chỉ viền ngăn cách giữa các ô bên trong.
+    9. **Inside Horizontal Border**: Chỉ viền ngăn cách ngang giữa các dòng (chuẩn bảng APA / Báo cáo tài chính).
+    10. **Inside Vertical Border**: Chỉ viền ngăn cách dọc giữa các cột.
+    11. **Diagonal Down Border / Diagonal Up Border**: Kẻ đường chéo ô (\ và /) bằng `linear-gradient` cho tiêu đề phân tách.
+    12. **Horizontal Line**: Chèn đường kẻ ngang `<hr>` phân cách.
+    13. **View Gridlines**: Chế độ Xem đường lưới mờ khi không viền (chỉ hiển thị trong Editor hỗ trợ nhập liệu, tự ẩn khi in và xuất file).
+    14. **Borders and Shading (Tùy biến đường viền & tô bóng)**: Lựa chọn kiểu nét (Solid, Dashed, Dotted, Double, Groove), độ dày nét (0.5pt - 3pt), màu viền tự do, và phạm vi áp dụng (Toàn bảng hoặc Ô đang chọn).
+- **Mở rộng các tính năng thao tác cấu trúc và bố cục bảng nâng cao:**
+  - **Gộp ô & Tách ô (Merge & Split Cells)**: Gộp ô sang phải (`colspan`), gộp ô xuống dưới (`rowspan`) và tách ô đã gộp trở lại (`split cell`).
+  - **Phân bố đều độ rộng các cột (Distribute Columns Evenly)**: Tự động tính toán và chia đều 100% độ rộng cho tất cả các cột trong bảng.
+  - **Căn lề vị trí toàn bảng trên trang A4**: Căn bảng sang trái, Căn giữa bảng trên trang A4, Căn bảng sang phải.
+  - **Tùy chỉnh độ rộng bảng**: 100% toàn trang, Tự co giãn theo nội dung (AutoFit), 90%, 80%.
+  - **Khoảng đệm ô (Cell Padding)**: Tùy chọn đệm Siêu gọn 2px (tối ưu cho phiếu khám đoàn, bệnh viện nhiều cột hẹp), Chuẩn 5px, Thoáng đãng 9px.
+  - **Dòng tiêu đề Header (`<th>`) & Tô màu dòng xen kẽ (Zebra Striping)**: Bật/tắt nhanh chóng.
+- **Tái cấu trúc Công cụ Bảng phân tab chuyên nghiệp (Table Studio Tabs):**
+  - Phân thành 4 tab rõ ràng: *Đường viền*, *Dòng & Cột*, *Gộp & Căn*, *Định dạng*.
+  - Đặt nút *Word Border Picker* trực tiếp trên Toolbar chính và tích hợp đồng bộ vào Context Menu chuột phải.
+
+---
+
 ## [1.0.9] - 2026-10-27
 
 ### Thêm mới & Nâng cấp (Added & Enhanced)
