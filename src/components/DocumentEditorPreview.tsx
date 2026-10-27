@@ -48,6 +48,10 @@ import { renderMergedHtml, getEffectiveMargin } from '../lib/docxHelper';
 import { ThemeGradient } from '../lib/theme';
 import { WordColorPicker } from './WordColorPicker';
 import { WordBorderPicker, BorderPresetType, BorderCustomOptions } from './WordBorderPicker';
+import { WordTableInsertPicker } from './WordTableInsertPicker';
+import { WordImageModal } from './WordImageModal';
+import { WordIconSymbolPicker } from './WordIconSymbolPicker';
+import { Image as ImageIcon } from 'lucide-react';
 
 export interface DocumentEditorHandle {
   insertTag: (tag: string) => void;
@@ -119,6 +123,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
   const [cellBgColor, setCellBgColor] = useState('#f1f5f9');
   const [isTableMenuOpen, setIsTableMenuOpen] = useState(false);
   const [isSymbolsOpen, setIsSymbolsOpen] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isCustomTableModalOpen, setIsCustomTableModalOpen] = useState(false);
   const [customRows, setCustomRows] = useState(4);
   const [customCols, setCustomCols] = useState(4);
@@ -619,6 +624,13 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
   };
 
   const insertTable = (rows: number, cols: number) => {
+    if (savedRangeRef.current && editorRef.current) {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+    }
     let tableHtml = '<table style="width: 100%; border-collapse: collapse; margin: 12px 0; border: 1.5px solid #000;"><tbody>';
     for (let r = 0; r < rows; r++) {
       tableHtml += '<tr>';
@@ -632,6 +644,58 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     }
     tableHtml += '</tbody></table><p><br></p>';
     document.execCommand('insertHTML', false, tableHtml);
+    if (editorRef.current && !isPreviewMode) {
+      commitHtmlChange(editorRef.current.innerHTML, true);
+    }
+  };
+
+  const handleInsertImage = (imageHtml: string) => {
+    if (savedRangeRef.current && editorRef.current) {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+    }
+    document.execCommand('insertHTML', false, imageHtml);
+    if (editorRef.current && !isPreviewMode) {
+      commitHtmlChange(editorRef.current.innerHTML, true);
+    }
+  };
+
+  const handleInsertHtml = (html: string) => {
+    if (savedRangeRef.current && editorRef.current) {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+    }
+    document.execCommand('insertHTML', false, html);
+    if (editorRef.current && !isPreviewMode) {
+      commitHtmlChange(editorRef.current.innerHTML, true);
+    }
+  };
+
+  const handleInsertQuickTable = (type: 'info2' | 'list3' | 'sign4' | 'health5') => {
+    let html = '';
+    if (type === 'info2') {
+      html = '<table style="width: 100%; border-collapse: collapse; margin: 12px 0; border: 1.5px solid #000;"><tbody><tr><td style="width: 30%; border: 1px solid #000; padding: 5px 8px; font-weight: bold; background: #f8fafc;">Tiêu chí</td><td style="width: 70%; border: 1px solid #000; padding: 5px 8px; font-weight: bold; background: #f8fafc;">Thông tin chi tiết</td></tr><tr><td style="border: 1px solid #000; padding: 5px 8px;">Họ và tên:</td><td style="border: 1px solid #000; padding: 5px 8px;">{{HoVaTen}}</td></tr><tr><td style="border: 1px solid #000; padding: 5px 8px;">Số điện thoại:</td><td style="border: 1px solid #000; padding: 5px 8px;">{{SoDienThoai}}</td></tr></tbody></table><p><br></p>';
+    } else if (type === 'list3') {
+      html = '<table style="width: 100%; border-collapse: collapse; margin: 12px 0; border: 1.5px solid #000;"><thead><tr><th style="width: 10%; border: 1px solid #000; padding: 6px; text-align: center; background: #f8fafc;">STT</th><th style="width: 60%; border: 1px solid #000; padding: 6px; text-align: left; background: #f8fafc;">Nội dung</th><th style="width: 30%; border: 1px solid #000; padding: 6px; text-align: center; background: #f8fafc;">Kết quả</th></tr></thead><tbody><tr><td style="border: 1px solid #000; padding: 5px 8px; text-align: center;">1</td><td style="border: 1px solid #000; padding: 5px 8px;">Nội dung 1</td><td style="border: 1px solid #000; padding: 5px 8px; text-align: center;">Đạt</td></tr></tbody></table><p><br></p>';
+    } else if (type === 'sign4') {
+      html = '<table style="width: 100%; border-collapse: collapse; margin: 12px 0; border: 1.5px solid #000;"><thead><tr><th style="width: 10%; border: 1px solid #000; padding: 6px; text-align: center; background: #f8fafc;">STT</th><th style="width: 40%; border: 1px solid #000; padding: 6px; text-align: left; background: #f8fafc;">Họ và tên</th><th style="width: 30%; border: 1px solid #000; padding: 6px; text-align: center; background: #f8fafc;">Chức vụ</th><th style="width: 20%; border: 1px solid #000; padding: 6px; text-align: center; background: #f8fafc;">Chữ ký</th></tr></thead><tbody><tr><td style="border: 1px solid #000; padding: 5px 8px; text-align: center;">1</td><td style="border: 1px solid #000; padding: 5px 8px;">{{HoVaTen}}</td><td style="border: 1px solid #000; padding: 5px 8px; text-align: center;">Nhân viên</td><td style="border: 1px solid #000; padding: 5px 8px; text-align: center;">&nbsp;</td></tr></tbody></table><p><br></p>';
+    } else if (type === 'health5') {
+      html = '<table style="width: 100%; border-collapse: collapse; margin: 12px 0; border: 1.5px solid #000;"><thead><tr><th style="width: 8%; border: 1px solid #000; padding: 6px; text-align: center; background: #f8fafc;">STT</th><th style="width: 25%; border: 1px solid #000; padding: 6px; text-align: left; background: #f8fafc;">Chuyên khoa</th><th style="width: 35%; border: 1px solid #000; padding: 6px; text-align: left; background: #f8fafc;">Nội dung khám</th><th style="width: 17%; border: 1px solid #000; padding: 6px; text-align: center; background: #f8fafc;">Kết luận</th><th style="width: 15%; border: 1px solid #000; padding: 6px; text-align: center; background: #f8fafc;">Bác sĩ</th></tr></thead><tbody><tr><td style="border: 1px solid #000; padding: 5px 8px; text-align: center;">1</td><td style="border: 1px solid #000; padding: 5px 8px;">Khám Thể lực</td><td style="border: 1px solid #000; padding: 5px 8px;">Chiều cao, cân nặng, BMI</td><td style="border: 1px solid #000; padding: 5px 8px; text-align: center;">Bình thường</td><td style="border: 1px solid #000; padding: 5px 8px; text-align: center;">&nbsp;</td></tr></tbody></table><p><br></p>';
+    }
+    if (savedRangeRef.current && editorRef.current) {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+    }
+    document.execCommand('insertHTML', false, html);
     if (editorRef.current && !isPreviewMode) {
       commitHtmlChange(editorRef.current.innerHTML, true);
     }
@@ -1631,34 +1695,40 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             <span className="font-mono font-bold text-[11px]">Tab ⇥</span>
           </button>
 
-          {/* Chèn Ký tự đặc biệt / Ô kiểm */}
-          <div className="relative" ref={symbolsMenuRef}>
-            <button
-              onClick={() => setIsSymbolsOpen(!isSymbolsOpen)}
-              onMouseDown={(e) => e.preventDefault()}
-              className={`px-2 py-1 rounded hover:bg-slate-100 text-slate-700 border border-slate-200 bg-slate-50 font-medium flex items-center gap-1 transition-all ${
-                isSymbolsOpen ? 'ring-2 ring-blue-400 bg-blue-50 text-blue-700' : ''
-              }`}
-              title="Chèn ký tự đặc biệt, dấu tích, ô vuông..."
-            >
-              <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
-              <span className="text-[11px]">Ký tự</span>
-            </button>
+          <span className="w-px h-4 bg-slate-200 mx-1"></span>
 
-            {isSymbolsOpen && (
-              <div className="absolute left-0 top-full mt-1.5 z-50 bg-white border border-slate-300 rounded-xl shadow-2xl p-2 w-56 max-w-[calc(100vw-2rem)] grid grid-cols-7 gap-1 animate-in fade-in zoom-in-95 duration-100">
-                {SPECIAL_SYMBOLS.map(sym => (
-                  <button
-                    key={sym}
-                    onClick={() => insertSymbol(sym)}
-                    className="w-7 h-7 flex items-center justify-center text-sm rounded hover:bg-blue-50 hover:text-blue-600 border border-slate-100 transition-colors"
-                  >
-                    {sym}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* === CỤM CÔNG CỤ CHÈN (INSERT SUITE - CHUẨN MICROSOFT WORD) === */}
+          {/* 1. Chèn Bảng với Ma trận lưới ô vuông 8x10 & Bảng mẫu nhanh */}
+          <WordTableInsertPicker
+            onInsertTable={insertTable}
+            onOpenCustomModal={() => setIsCustomTableModalOpen(true)}
+            onInsertQuickTable={handleInsertQuickTable}
+            dropdownAlign="left"
+            title="Chèn Bảng (Insert Table) · Lưới ma trận trực quan & Mẫu nhanh"
+          />
+
+          {/* 2. Chèn Ảnh từ máy tính hoặc URL */}
+          <button
+            type="button"
+            onClick={() => {
+              saveSelection();
+              setIsImageModalOpen(true);
+            }}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-1 rounded-md border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs bg-white hover:bg-slate-100 text-slate-700 border-slate-200"
+            title="Chèn hình ảnh từ máy tính hoặc link URL (Insert Picture)"
+          >
+            <ImageIcon className="w-3.5 h-3.5 text-sky-600" />
+            <span>Chèn Ảnh</span>
+          </button>
+
+          {/* 3. Chèn Biểu tượng, Icon, Khung ghi chú */}
+          <WordIconSymbolPicker
+            onInsertSymbol={insertSymbol}
+            onInsertHtml={handleInsertHtml}
+            dropdownAlign="left"
+            title="Chèn Biểu tượng, Icon, Ô kiểm & Khung ghi chú (Insert Icons & Symbols)"
+          />
 
           <span className="w-px h-4 bg-slate-200 mx-1"></span>
 
@@ -2164,6 +2234,13 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
           </div>
         </div>
       )}
+
+      {/* MODAL CHÈN ẢNH CHUẨN MICROSOFT WORD */}
+      <WordImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        onInsertImage={handleInsertImage}
+      />
 
       {/* MODAL TÙY CHỈNH LỀ TRANG (CUSTOM MARGIN DIALOG) TRỰC TIẾP TRÊN SOẠN THẢO */}
       {isMarginModalOpen && (
@@ -2818,20 +2895,53 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             </div>
           )}
 
-          {/* Chèn Ký tự đặc biệt & Ô kiểm nhanh */}
-          <div className="border-t border-slate-100 pt-1.5">
-            <span className="text-[10px] font-semibold text-slate-500 block mb-1">Chèn nhanh ký tự &amp; ô kiểm:</span>
-            <div className="flex items-center gap-1 flex-wrap">
-              {['✓', '✔', '☐', '☑', '★', '•', '→'].map(sym => (
-                <button
-                  key={sym}
-                  onClick={() => runContextSymbol(sym)}
-                  onMouseDown={(e) => e.preventDefault()}
-                  className="w-6 h-6 rounded bg-slate-50 hover:bg-blue-50 hover:text-blue-600 border border-slate-200 flex items-center justify-center text-xs font-semibold"
-                >
-                  {sym}
-                </button>
-              ))}
+          {/* CHÈN ĐỐI TƯỢNG NHANH TỪ MENU CHUỘT PHẢI (INSERT SUITE) */}
+          <div className="border-t border-slate-100 pt-1.5 space-y-1.5">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  closeContextMenu();
+                  setIsImageModalOpen(true);
+                }}
+                onMouseDown={(e) => e.preventDefault()}
+                className="flex-1 py-1 px-2 bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-lg border border-sky-200 flex items-center justify-center gap-1 text-[11px] font-semibold transition-colors"
+                title="Chèn ảnh từ máy tính hoặc liên kết URL"
+              >
+                <ImageIcon className="w-3.5 h-3.5 text-sky-600" />
+                <span>Chèn Ảnh...</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  insertTable(3, 3);
+                  closeContextMenu();
+                }}
+                onMouseDown={(e) => e.preventDefault()}
+                className="flex-1 py-1 px-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg border border-blue-200 flex items-center justify-center gap-1 text-[11px] font-semibold transition-colors"
+                title="Tạo nhanh bảng 3 hàng x 3 cột"
+              >
+                <TableIcon className="w-3.5 h-3.5 text-blue-600" />
+                <span>Bảng (3x3)</span>
+              </button>
+            </div>
+
+            <div>
+              <span className="text-[10px] font-semibold text-slate-500 block mb-1">Chèn nhanh ký tự &amp; ô kiểm:</span>
+              <div className="flex items-center gap-1 flex-wrap">
+                {['✓', '✔', '☐', '☑', '➔', '📞', '✉️', '₫', '⭐', '•', '📌', '💡'].map(sym => (
+                  <button
+                    key={sym}
+                    onClick={() => runContextSymbol(sym)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="w-6 h-6 rounded bg-slate-50 hover:bg-blue-50 hover:text-blue-600 border border-slate-200 flex items-center justify-center text-xs font-semibold"
+                    title={`Chèn "${sym}"`}
+                  >
+                    {sym}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

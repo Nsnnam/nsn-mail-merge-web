@@ -42,7 +42,7 @@ export const APP_META: AppMeta = {
   shortName: "Merge Word",
   description: "Chỉnh sửa và trộn thư",
   appCode: "NAMNSMERGE",
-  version: "1.0.10",
+  version: "1.0.11",
   date: "2026-10-27",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
@@ -50,6 +50,17 @@ export const APP_META: AppMeta = {
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.11",
+      date: "2026-10-27",
+      changes: [
+        "Bổ sung bộ công cụ Chèn đối tượng chuẩn Microsoft Word (Insert Suite): Tách biệt độc lập Chèn Bảng (Insert Table), Chèn Ảnh (Pictures) và Biểu tượng / Icon (Icons & Symbols / Shapes) trực tiếp trên thanh công cụ chính và menu ngữ cảnh chuột phải.",
+        "Ma trận lưới Chèn Bảng trực quan (8 hàng x 10 cột): Hover rê chuột chọn nhanh kích thước bảng (ví dụ 3x3, 4x5, 8x10...) kèm nhãn hiển thị số hàng x số cột theo thời gian thực; nút mở modal chèn bảng tùy biến kích thước và khối Chèn bảng mẫu nhanh (Quick Tables: Bảng thông tin 2 cột, Bảng đối chiếu 3 cột, Bảng ký tên 4 cột, Bảng khám đoàn 5 cột).",
+        "Tính năng Chèn Hình ảnh (Insert Picture) chuẩn Word: Hỗ trợ tải ảnh từ máy tính (PNG, JPG, WebP, SVG, GIF) tự động chuyển sang Base64 Data URL hoạt động 100% offline trong RAM trình duyệt hoặc nhập URL web; xem trước ảnh trực quan; tùy biến kích cỡ (150px, 300px, 500px, 100%, hoặc pixel tùy ý), căn lề (Trái, Giữa, Phải), bo góc và viền mờ.",
+        "Bộ sưu tập Biểu tượng & Icon (Icons & Symbols) đa dạng: 5 danh mục phân loại tiện lợi gồm Dấu kiểm & Hộp chọn (Check & Box), Văn phòng & Hành chính Y tế, Mũi tên & Phân cách, Toán học & Tiền tệ, cùng Khung ghi chú nổi bật (Callout Boxes: Hộp thông tin, Kết quả/Đạt, Lưu ý quan trọng, Cảnh báo, Trích dẫn và Đường kẻ phân cách hoa văn).",
+        "Bảo toàn vị trí con trỏ chuột (Selection Preservation): Đảm bảo chèn chính xác ảnh, bảng biểu hoặc biểu tượng vào vị trí con trỏ hoặc thay thế vùng chọn bôi đen mà không bị lệch hay mất dữ liệu."
+      ]
+    },
     {
       version: "1.0.10",
       date: "2026-10-27",

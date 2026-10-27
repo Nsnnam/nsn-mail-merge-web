@@ -5,7 +5,7 @@
 > Tuân thủ chuẩn **NSN App Standard** · Offline 100% Client-Side trong bộ nhớ trình duyệt.
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Online-blue?style=flat-square&logo=github)](https://Nsnnam.github.io/nsn-mail-merge-web/)
-[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.10-emerald?style=flat-square)](CHANGELOG.md)
+[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.11-emerald?style=flat-square)](CHANGELOG.md)
 [![Tác giả](https://img.shields.io/badge/Tác_giả-Nguyễn_Sơn_Nam-indigo?style=flat-square)](AUTHORS.md)
 [![Ủng hộ](https://img.shields.io/badge/Mời_cà_phê-BIDV_8855989777-amber?style=flat-square)](SUPPORT.md)
 
@@ -13,7 +13,12 @@
 
 ## 🌟 Tính năng nổi bật
 
-1. **Bộ tùy chỉnh & Định dạng Bảng biểu chuẩn Microsoft Word (Word Table & Border Suite)**:
+1. **Bộ công cụ Chèn đối tượng chuẩn Microsoft Word (Word Insert Suite)**:
+   - **Chèn Bảng trực quan với ma trận lưới 8x10 (Interactive Table Matrix)**: Rê chuột chọn nhanh kích thước bảng từ 1x1 đến 8x10 với hiệu ứng đổi màu và hiển thị số hàng x số cột thời gian thực; nút mở modal chèn bảng tùy chọn kích thước (lên tới 50x20) và khối Chèn bảng mẫu nhanh (Bảng thông tin 2 cột, Bảng đối chiếu 3 cột, Bảng ký tên 4 cột, Bảng khám chuyên khoa y tế 5 cột).
+   - **Chèn Ảnh từ máy tính hoặc URL (Insert Picture)**: Tải ảnh từ máy tính (PNG, JPG, WebP, SVG, GIF...) tự động chuyển đổi thành Base64 Data URL hoạt động 100% Client-Side Offline, không phụ thuộc server ngoài; tùy biến kích cỡ (150px, 300px, 500px, 100%, hoặc pixel tùy ý), căn lề (Trái, Giữa, Phải), bo góc (0px - 16px) và viền mờ thẩm mỹ.
+   - **Bộ sưu tập Biểu tượng & Icon đa năng (Icons & Symbols / Shapes)**: Phân nhóm 5 danh mục trực quan gồm Dấu kiểm & Hộp chọn (✓, ✔, ☐, ☑, ✕...), Văn phòng & Y tế (📞, ✉️, 🏢, 🏥, 🩺...), Mũi tên & Phân cách (➔, ⇄, •, ❖...), Toán học & Tiền tệ (₫, $, €, %, ±, ∞...) cùng Khung ghi chú nổi bật (Callout Boxes: Hộp thông tin, Kết quả/Đạt, Lưu ý quan trọng, Cảnh báo, Trích dẫn và Đường kẻ phân cách hoa văn).
+   - **Bảo toàn vùng chọn con trỏ chuột (Selection Preservation)**: Đảm bảo chèn chính xác đối tượng tại vị trí con trỏ hoặc thay thế đoạn bôi đen mà không bị mất dấu hay nhảy trang.
+2. **Bộ tùy chỉnh & Định dạng Bảng biểu chuẩn Microsoft Word (Word Table & Border Suite)**:
    - **Menu chọn đường viền chuẩn Word**: Tích hợp trọn bộ 15 tùy chọn viền với biểu tượng trực quan y hệt Word (Viền dưới, Viền trên, Viền trái, Viền phải, Không viền, Tất cả viền, Chỉ viền ngoài, Chỉ viền trong, Viền ngang bên trong, Viền dọc bên trong, Đường chéo ô \ và /, Kẻ ngang phân cách, và Xem đường lưới View Gridlines).
    - **Tùy biến đường viền & Tô bóng (Borders and Shading)**: Lựa chọn kiểu nét (Solid, Dashed, Dotted, Double, Groove), độ dày nét (0.5pt - 3pt), màu viền tùy chọn, áp dụng cho toàn bảng hoặc từng ô đang chọn.
    - **Gộp ô & Tách ô (Merge & Split Cells)**: Gộp ô sang phải (`colspan`), gộp ô xuống dưới (`rowspan`) và tách ô đã gộp (`split cell`).

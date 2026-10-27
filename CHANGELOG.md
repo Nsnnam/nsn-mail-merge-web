@@ -3,6 +3,34 @@
 Tất cả thay đổi đáng chú ý của dự án **Namns Merge Word** được ghi lại tại đây theo chuẩn [Keep a Changelog](https://keepachangelog.com/) và [Semantic Versioning](https://semver.org/).  
 Múi giờ áp dụng: **Asia/Ho_Chi_Minh (GMT+7)**.
 
+## [1.0.11] - 2026-10-27
+
+### Thêm mới & Nâng cấp (Added & Enhanced)
+- **Tích hợp trọn bộ công cụ Chèn đối tượng chuẩn Microsoft Word (Word Insert Suite):**
+  - Tách biệt độc lập các luồng tác vụ: **Chèn Bảng (Insert Table)**, **Chèn Ảnh (Pictures)**, và **Biểu tượng & Icon (Icons & Symbols / Shapes)** trực tiếp trên Thanh công cụ chính và Menu ngữ cảnh chuột phải.
+- **Ma trận lưới Chèn Bảng trực quan (Interactive Table Matrix 8x10):**
+  - Giao diện chọn kích thước bảng dạng lưới ô vuông 8 hàng x 10 cột y hệt Microsoft Word.
+  - Rê chuột (hover) để xem trước số hàng x số cột theo thời gian thực (như 3x3, 4x5, 6x8...) và nhấp chuột để chèn ngay lập tức vào văn bản.
+  - Tích hợp nút *"Chèn bảng tùy chọn (Insert Table)..."* mở modal nhập số dòng, số cột tùy ý (lên tới 50 hàng x 20 cột).
+  - Tích hợp khối *"Bảng mẫu nhanh (Quick Tables)"*: Chèn 1-click Bảng thông tin 2 cột, Bảng đối chiếu 3 cột, Bảng ký tên 4 cột, Bảng khám chuyên khoa y tế 5 cột.
+- **Tính năng Chèn Hình ảnh (Insert Picture) chuẩn Word:**
+  - Hỗ trợ 2 phương thức: Tải ảnh từ máy tính (PNG, JPG, WebP, SVG, GIF, BMP...) hoặc Chèn từ liên kết ảnh trực tuyến (Image URL).
+  - Tự động chuyển đổi ảnh tải lên thành Base64 Data URL, lưu trữ trực tiếp trong tài liệu HTML, hoạt động 100% Client-Side Offline trong RAM trình duyệt, không phụ thuộc server ngoài, in ấn và xuất file Word .DOCX giữ nguyên ảnh hoàn hảo.
+  - Tùy chỉnh kích thước ảnh linh hoạt: Nhỏ (150px), Vừa (300px), Lớn (500px), 100% chiều rộng trang, hoặc nhập kích thước pixel tùy ý.
+  - Căn lề ảnh chuẩn Word: Căn Trái, Căn Giữa trang, Căn Phải.
+  - Tùy chọn bo góc ảnh (0px, 4px, 8px, 16px) và viền mờ thẩm mỹ.
+- **Bộ sưu tập Biểu tượng & Icon đa năng (Unicode & Shapes & Callout Boxes):**
+  - Phân nhóm 5 danh mục trực quan:
+    1. *✓ Kiểm & Hộp chọn*: Dấu tick, dấu x, checkbox ô vuông, cờ, ghim, sao...
+    2. *🏢 Hành chính & Y tế*: Điện thoại, email, địa chỉ, bệnh viện, ống nghe, bác sĩ, lịch, đồng hồ...
+    3. *➔ Mũi tên & Phân cách*: Mũi tên đa hướng, bullet point, hoa thị, hình thoi...
+    4. *₫ Toán học & Tiền tệ*: Ký hiệu VNĐ (₫), Dollar, Euro, phần trăm, cộng trừ, nhân chia, vô cùng, căn bậc hai...
+    5. *📦 Khung ghi chú nổi bật (Callout Boxes)*: Khung Thông tin (xanh dương), Khung Đạt chuẩn (xanh lá), Khung Lưu ý quan trọng (vàng cam), Khung Cảnh báo nguy hiểm (đỏ), Khung Trích dẫn điều lệ, và Đường kẻ hoa văn phân cách.
+- **Cơ chế bảo toàn vị trí con trỏ chuột (Selection & Range Preservation):**
+  - Tự động lưu và khôi phục vùng chọn trước khi chèn bảng, chèn ảnh hoặc chèn icon, đảm bảo đối tượng xuất hiện chính xác tại vị trí con trỏ hoặc thay thế đoạn bôi đen mà không bị nhảy dòng hay mất focus.
+
+---
+
 ## [1.0.10] - 2026-10-27
 
 ### Thêm mới & Nâng cấp (Added & Enhanced)
