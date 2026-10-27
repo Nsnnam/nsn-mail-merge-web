@@ -46,6 +46,7 @@ import { DocumentSettings, DocumentMargin, PageMarginType } from '../types';
 import { VIETNAMESE_FONTS } from '../lib/fonts';
 import { renderMergedHtml, getEffectiveMargin } from '../lib/docxHelper';
 import { ThemeGradient } from '../lib/theme';
+import { WordColorPicker } from './WordColorPicker';
 
 export interface DocumentEditorHandle {
   insertTag: (tag: string) => void;
@@ -419,12 +420,18 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
 
     if (range.collapsed) {
       if (property === 'color') document.execCommand('foreColor', false, value);
-      if (property === 'backgroundColor') document.execCommand('hiliteColor', false, value);
+      if (property === 'backgroundColor' || property === 'background-color') {
+        document.execCommand('hiliteColor', false, value === 'transparent' ? 'transparent' : value);
+      }
       return;
     }
 
     const span = document.createElement('span');
-    span.style.setProperty(property, value);
+    if ((property === 'backgroundColor' || property === 'background-color') && value === 'transparent') {
+      span.style.backgroundColor = 'transparent';
+    } else {
+      span.style.setProperty(property, value);
+    }
     try {
       const contents = range.extractContents();
       span.appendChild(contents);
@@ -773,7 +780,12 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     setCellBgColor(color);
     const found = getClosestCellAndTable();
     if (found) {
-      found.cell.style.backgroundColor = color;
+      if (color === 'transparent') {
+        found.cell.style.removeProperty('background-color');
+        found.cell.style.backgroundColor = 'transparent';
+      } else {
+        found.cell.style.backgroundColor = color;
+      }
       if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
     }
   };
@@ -1133,35 +1145,27 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
 
           <span className="w-px h-4 bg-slate-200 mx-1"></span>
 
-          {/* Màu chữ (Color picker) */}
-          <div className="flex items-center gap-1 border border-slate-200 rounded px-1.5 py-0.5 bg-slate-50" title="Màu chữ">
-            <Palette className="w-3.5 h-3.5 text-blue-600" />
-            <input
-              type="color"
-              value={textColor}
-              onChange={(e) => {
-                setTextColor(e.target.value);
-                applyInlineStyle('color', e.target.value);
-              }}
-              className="w-4 h-4 rounded cursor-pointer border-0 bg-transparent p-0"
-              title="Chọn màu chữ"
-            />
-          </div>
+          {/* Màu chữ (Font Color) phong cách Microsoft Word */}
+          <WordColorPicker
+            type="text"
+            currentColor={textColor}
+            onSelectColor={(c) => {
+              setTextColor(c);
+              applyInlineStyle('color', c);
+            }}
+            title="Màu chữ (Font Color)"
+          />
 
-          {/* Màu nền / Highlight */}
-          <div className="flex items-center gap-1 border border-slate-200 rounded px-1.5 py-0.5 bg-slate-50" title="Màu đánh dấu nền chữ">
-            <Highlighter className="w-3.5 h-3.5 text-amber-500" />
-            <input
-              type="color"
-              value={highlightColor}
-              onChange={(e) => {
-                setHighlightColor(e.target.value);
-                applyInlineStyle('background-color', e.target.value);
-              }}
-              className="w-4 h-4 rounded cursor-pointer border-0 bg-transparent p-0"
-              title="Chọn màu nền chữ"
-            />
-          </div>
+          {/* Màu đánh dấu nền chữ (Highlight Color) phong cách Microsoft Word */}
+          <WordColorPicker
+            type="highlight"
+            currentColor={highlightColor}
+            onSelectColor={(c) => {
+              setHighlightColor(c);
+              applyInlineStyle('background-color', c);
+            }}
+            title="Màu đánh dấu nền chữ (Highlight Color)"
+          />
 
           <span className="w-px h-4 bg-slate-200 mx-1"></span>
 
@@ -1461,12 +1465,12 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
                 <div className="border-t border-slate-100 pt-2.5 flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-semibold text-slate-600">Nền ô:</span>
-                    <input
-                      type="color"
-                      value={cellBgColor}
-                      onChange={(e) => handleCellBgColorChange(e.target.value)}
-                      className="w-6 h-6 rounded cursor-pointer border border-slate-200 p-0"
-                      title="Chọn màu nền ô đang chọn"
+                    <WordColorPicker
+                      type="cell"
+                      currentColor={cellBgColor}
+                      onSelectColor={(c) => handleCellBgColorChange(c)}
+                      title="Chọn màu nền ô bảng"
+                      dropdownAlign="left"
                     />
                   </div>
 
@@ -1860,31 +1864,27 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
 
             <span className="w-px h-3.5 bg-slate-200 mx-0.5"></span>
 
-            <label className="flex items-center gap-0.5 p-1 rounded hover:bg-slate-200 cursor-pointer" title="Đổi màu chữ">
-              <Palette className="w-3.5 h-3.5 text-blue-600" />
-              <input
-                type="color"
-                value={textColor}
-                onChange={(e) => {
-                  setTextColor(e.target.value);
-                  applyContextInlineStyle('color', e.target.value);
-                }}
-                className="w-3.5 h-3.5 rounded cursor-pointer border-0 p-0 bg-transparent"
-              />
-            </label>
+            {/* Màu chữ kiểu Word */}
+            <WordColorPicker
+              type="text"
+              currentColor={textColor}
+              onSelectColor={(c) => {
+                setTextColor(c);
+                applyContextInlineStyle('color', c);
+              }}
+              title="Đổi màu chữ"
+            />
 
-            <label className="flex items-center gap-0.5 p-1 rounded hover:bg-slate-200 cursor-pointer" title="Màu nền chữ (Highlight)">
-              <Highlighter className="w-3.5 h-3.5 text-amber-500" />
-              <input
-                type="color"
-                value={highlightColor}
-                onChange={(e) => {
-                  setHighlightColor(e.target.value);
-                  applyContextInlineStyle('background-color', e.target.value);
-                }}
-                className="w-3.5 h-3.5 rounded cursor-pointer border-0 p-0 bg-transparent"
-              />
-            </label>
+            {/* Màu đánh dấu nền chữ kiểu Word */}
+            <WordColorPicker
+              type="highlight"
+              currentColor={highlightColor}
+              onSelectColor={(c) => {
+                setHighlightColor(c);
+                applyContextInlineStyle('background-color', c);
+              }}
+              title="Màu đánh dấu nền chữ"
+            />
 
             <button
               onClick={() => execContextFormat('removeFormat')}
@@ -2123,14 +2123,15 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
               <div className="flex items-center justify-between gap-1 pt-1 border-t border-indigo-100">
                 <div className="flex items-center gap-1">
                   <span className="text-[10px] font-semibold text-slate-600">Nền ô:</span>
-                  <input
-                    type="color"
-                    value={cellBgColor}
-                    onChange={(e) => {
-                      setCellBgColor(e.target.value);
-                      handleCellBgColorChange(e.target.value);
+                  <WordColorPicker
+                    type="cell"
+                    currentColor={cellBgColor}
+                    onSelectColor={(c) => {
+                      setCellBgColor(c);
+                      runTableAction(() => handleCellBgColorChange(c));
                     }}
-                    className="w-5 h-5 rounded cursor-pointer border border-slate-200 p-0 bg-transparent"
+                    title="Màu nền ô bảng"
+                    dropdownAlign="left"
                   />
                 </div>
                 <div className="flex items-center gap-1">

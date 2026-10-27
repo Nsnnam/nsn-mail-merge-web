@@ -3,6 +3,27 @@
 Tất cả thay đổi đáng chú ý của dự án **Namns Merge Word** được ghi lại tại đây theo chuẩn [Keep a Changelog](https://keepachangelog.com/) và [Semantic Versioning](https://semver.org/).  
 Múi giờ áp dụng: **Asia/Ho_Chi_Minh (GMT+7)**.
 
+## [1.0.9] - 2026-10-27
+
+### Thêm mới & Nâng cấp (Added & Enhanced)
+- **Bảng chọn màu chuẩn phong cách Microsoft Word (Word Style Color Palette):**
+  - Thay thế hoàn toàn bảng chọn màu mặc định của trình duyệt (`<input type="color">` dạng quang phổ/gradient khó căn chỉnh) bằng bảng chọn màu dạng ô lưới chuẩn Office / Word.
+  - Hỗ trợ đầy đủ cho cả 3 chế độ màu:
+    1. **Màu chữ (Font / Text Color):** Biểu tượng chữ `A` với thanh màu dưới chân chuẩn Word, nút "Tự động (Màu đen #000000)", lưới Màu chủ đề (Theme Colors 10 cột x 6 hàng sắc độ), lưới Màu tiêu chuẩn (Standard Colors 10 màu), và tùy chọn "Màu khác (More Colors)...".
+    2. **Màu đánh dấu nền chữ (Text Highlight Color):** Biểu tượng bút dạ quang, nút "Không màu (Mặc định / Bỏ màu nền)", 15 màu dạ quang chuẩn Word (vàng chanh, lục, xanh lơ, hồng tím...), lưới Theme Colors + Standard Colors và "Màu khác...".
+    3. **Màu nền ô bảng (Cell Background Color):** Biểu tượng cọ sơn và ô màu trực quan, nút "Không màu", lưới Theme Colors + Standard Colors và "Màu khác...".
+  - **Màu khác (More Colors):** Mở nhanh ô nhập mã màu Hex trực tiếp hoặc chọn tự do từ bảng quang phổ khi người dùng cần màu sắc thương hiệu riêng biệt.
+- **Đồng bộ hóa trên cả Toolbar chính và Menu chuột phải (Context Menu):**
+  - Cập nhật trên thanh công cụ soạn thảo chính (Main Toolbar).
+  - Cập nhật trong menu Thao tác Bảng biểu (Table Suite Dropdown).
+  - Cập nhật trong thanh công cụ mini của Menu chuột phải (Context Menu).
+  - Cập nhật trong khối Bảng biểu của Menu chuột phải (Context Menu).
+- **Cơ chế chọn màu thông minh:**
+  - Bảo toàn vùng chọn (Selection Preservation): Sử dụng `onMouseDown={(e) => e.preventDefault()}` trên mọi ô màu và nút chọn màu, đảm bảo văn bản bôi đen không bị mất tiêu điểm khi nhấp chuột.
+  - Tự động căn lề và chống tràn màn hình (Viewport Collision Prevention): Popover màu được định vị `fixed z-[9999]`, tự động tính toán vị trí theo nút bấm kích hoạt, lật lên phía trên nếu gần đáy màn hình và lùi vào trong nếu gần mép phải.
+
+---
+
 ## [1.0.8] - 2026-10-23
 
 ### Thêm mới & Nâng cấp (Added & Enhanced)

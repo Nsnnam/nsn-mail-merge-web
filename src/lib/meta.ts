@@ -42,14 +42,23 @@ export const APP_META: AppMeta = {
   shortName: "Merge Word",
   description: "Chỉnh sửa và trộn thư",
   appCode: "NAMNSMERGE",
-  version: "1.0.8",
-  date: "2026-10-23",
+  version: "1.0.9",
+  date: "2026-10-27",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
   role: "Tác giả · Tiện ích HIS / Excel / Tự động hóa văn bản",
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.9",
+      date: "2026-10-27",
+      changes: [
+        "Nâng cấp bảng chọn màu chuẩn Microsoft Word cho Màu chữ (Font Color), Màu đánh dấu nền chữ (Text Highlight Color) và Màu nền ô bảng (Cell Background): Thay thế toàn bộ hộp thoại quang phổ mặc định của trình duyệt bằng bảng màu lưới trực quan, chính xác.",
+        "Thiết kế chuẩn Office / Word: Tích hợp đầy đủ nút Tự động (Màu đen #000000) / Không màu (Bỏ màu nền transparent), Khối Màu dạ quang 15 màu chuẩn Word, Khối Màu chủ đề Theme Colors (10 cột x 6 hàng sắc độ), Khối Màu tiêu chuẩn Standard Colors (10 màu) và Tùy chọn Màu khác (More Colors)... nhập mã Hex hoặc chọn phổ tự do.",
+        "Đồng bộ trên cả Thanh công cụ chính (Toolbar), Menu Công cụ Bảng (Table Suite) và Menu chuột phải (Context Menu): Giữ nguyên vẹn vùng bôi đen (Selection Preservation), chống trượt hoặc mất con trỏ, tự động căn chỉnh tọa độ an toàn không bị tràn mép màn hình."
+      ]
+    },
     {
       version: "1.0.8",
       date: "2026-10-23",

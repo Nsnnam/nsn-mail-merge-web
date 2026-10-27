@@ -5,7 +5,7 @@
 > Tuân thủ chuẩn **NSN App Standard** · Offline 100% Client-Side trong bộ nhớ trình duyệt.
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Online-blue?style=flat-square&logo=github)](https://Nsnnam.github.io/nsn-mail-merge-web/)
-[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.8-emerald?style=flat-square)](CHANGELOG.md)
+[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.9-emerald?style=flat-square)](CHANGELOG.md)
 [![Tác giả](https://img.shields.io/badge/Tác_giả-Nguyễn_Sơn_Nam-indigo?style=flat-square)](AUTHORS.md)
 [![Ủng hộ](https://img.shields.io/badge/Mời_cà_phê-BIDV_8855989777-amber?style=flat-square)](SUPPORT.md)
 
@@ -13,7 +13,12 @@
 
 ## 🌟 Tính năng nổi bật
 
-1. **Tùy chỉnh Lề trang (Margin) & Font chữ chuẩn hành chính**:
+1. **Bảng chọn màu chuẩn phong cách Microsoft Word (Word Style Color Palette)**:
+   - **Thay thế hộp thoại màu mặc định của trình duyệt**: Chuyển đổi toàn diện sang giao diện bảng chọn màu dạng ô lưới trực quan, chính xác theo chuẩn văn phòng Microsoft Word.
+   - **Đầy đủ 3 chế độ màu**: Màu chữ (Font Color), Màu đánh dấu nền chữ (Highlight Color) và Màu nền ô bảng biểu (Cell Background Color).
+   - **Tùy chọn chuẩn Word**: Nút "Tự động (Màu đen #000000)", nút "Không màu (Mặc định / Bỏ màu nền)", Khối 15 màu dạ quang highlight, Khối Màu chủ đề Theme Colors (10 cột x 6 hàng sắc độ), Khối Màu tiêu chuẩn Standard Colors (10 màu) và "Màu khác (More Colors)..." nhập mã Hex hoặc chọn quang phổ tự do.
+   - **Đồng bộ trên cả Thanh công cụ chính và Menu chuột phải**: Tích hợp cơ chế bảo toàn vùng chọn (Selection Preservation) không làm mất đoạn chữ bôi đen, cùng thuật toán chống tràn màn hình thông minh.
+2. **Tùy chỉnh Lề trang (Margin) & Font chữ chuẩn hành chính**:
    - **Mặc định theo file Word tải lên**: Tự động trích xuất thẻ `<w:pgMar>` từ cấu trúc OpenXML của file `.docx`, giữ trọn vẹn thông số lề (kể cả các tài liệu lề hẹp chuyên dụng khám đoàn bệnh viện ~5mm).
    - **Chuẩn Nghị định 30/2020/NĐ-CP**: Cung cấp preset thể thức văn bản hành chính Việt Nam (Trên 20mm, Dưới 20mm, Trái 30mm đóng gáy, Phải 15mm), Tiêu chuẩn (25.4mm), Hẹp (12.7mm), Vừa phải.
    - **Tùy chỉnh Millimeter (mm) linh hoạt**: Cho phép người dùng nhập trực tiếp khoảng cách lề Trên, Dưới, Trái, Phải và lưu áp dụng ngay.
