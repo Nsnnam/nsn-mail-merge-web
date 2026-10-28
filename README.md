@@ -5,7 +5,7 @@
 > Tuân thủ chuẩn **NSN App Standard** · Offline 100% Client-Side trong bộ nhớ trình duyệt.
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Online-blue?style=flat-square&logo=github)](https://Nsnnam.github.io/nsn-mail-merge-web/)
-[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.11-emerald?style=flat-square)](CHANGELOG.md)
+[![Phiên bản](https://img.shields.io/badge/Phiên_bản-v1.0.12-emerald?style=flat-square)](CHANGELOG.md)
 [![Tác giả](https://img.shields.io/badge/Tác_giả-Nguyễn_Sơn_Nam-indigo?style=flat-square)](AUTHORS.md)
 [![Ủng hộ](https://img.shields.io/badge/Mời_cà_phê-BIDV_8855989777-amber?style=flat-square)](SUPPORT.md)
 
@@ -13,12 +13,18 @@
 
 ## 🌟 Tính năng nổi bật
 
-1. **Bộ công cụ Chèn đối tượng chuẩn Microsoft Word (Word Insert Suite)**:
+1. **Chỉnh sửa Hình ảnh trực tiếp trong khung soạn thảo (Inline Image Editor & Interactive Overlay)**:
+   - **Khung chọn thông minh & 8 điểm neo co giãn (Handles)**: Nhấp chuột vào ảnh hiển thị khung bao viền xanh Word, 8 nút neo co giãn quanh các góc/cạnh, chốt xoay tròn trên đỉnh và nút Layout Options.
+   - **Kéo chuột co giãn ảnh trực tiếp (Drag-to-Resize)**: Giữ và kéo thả các điểm neo để thay đổi kích cỡ ảnh mượt mà thời gian thực (realtime) với cơ chế tự động giữ tỉ lệ khung hình (aspect ratio).
+   - **Bảng Tùy chọn Bố cục Văn bản (Layout Options Popup chuẩn Word)**: Cung cấp đầy đủ các chế độ bao quanh văn bản: *In Line with Text* (cùng dòng), *Square Left / Right* (chữ bao quanh vuông bên trái hoặc phải), *Top and Bottom* (ngắt đoạn trên/dưới), *Behind Text* (chìm dưới chữ / Watermark mờ), *In Front of Text* (nổi đè lên chữ).
+   - **Thanh công cụ nhanh nổi (Floating Action Bar)**: Chọn nhanh kích thước (150px, 300px, 500px, 100%, hoặc nhập số px), căn lề ảnh (Trái, Giữa, Phải), bo góc (0px đến 50% tròn), đường viền & đổ bóng (Shadow), xoay 90 độ, lật ảnh ngang, làm mờ (Opacity) và đổi ảnh khác từ máy tính.
+   - **Đồng bộ trên Context Menu chuột phải**: Click chuột phải vào ảnh mở ngay khối công cụ ảnh chuyên biệt; hỗ trợ phím Delete/Backspace để xóa ảnh và phím Escape để hủy chọn.
+2. **Bộ công cụ Chèn đối tượng chuẩn Microsoft Word (Word Insert Suite)**:
    - **Chèn Bảng trực quan với ma trận lưới 8x10 (Interactive Table Matrix)**: Rê chuột chọn nhanh kích thước bảng từ 1x1 đến 8x10 với hiệu ứng đổi màu và hiển thị số hàng x số cột thời gian thực; nút mở modal chèn bảng tùy chọn kích thước (lên tới 50x20) và khối Chèn bảng mẫu nhanh (Bảng thông tin 2 cột, Bảng đối chiếu 3 cột, Bảng ký tên 4 cột, Bảng khám chuyên khoa y tế 5 cột).
    - **Chèn Ảnh từ máy tính hoặc URL (Insert Picture)**: Tải ảnh từ máy tính (PNG, JPG, WebP, SVG, GIF...) tự động chuyển đổi thành Base64 Data URL hoạt động 100% Client-Side Offline, không phụ thuộc server ngoài; tùy biến kích cỡ (150px, 300px, 500px, 100%, hoặc pixel tùy ý), căn lề (Trái, Giữa, Phải), bo góc (0px - 16px) và viền mờ thẩm mỹ.
    - **Bộ sưu tập Biểu tượng & Icon đa năng (Icons & Symbols / Shapes)**: Phân nhóm 5 danh mục trực quan gồm Dấu kiểm & Hộp chọn (✓, ✔, ☐, ☑, ✕...), Văn phòng & Y tế (📞, ✉️, 🏢, 🏥, 🩺...), Mũi tên & Phân cách (➔, ⇄, •, ❖...), Toán học & Tiền tệ (₫, $, €, %, ±, ∞...) cùng Khung ghi chú nổi bật (Callout Boxes: Hộp thông tin, Kết quả/Đạt, Lưu ý quan trọng, Cảnh báo, Trích dẫn và Đường kẻ phân cách hoa văn).
    - **Bảo toàn vùng chọn con trỏ chuột (Selection Preservation)**: Đảm bảo chèn chính xác đối tượng tại vị trí con trỏ hoặc thay thế đoạn bôi đen mà không bị mất dấu hay nhảy trang.
-2. **Bộ tùy chỉnh & Định dạng Bảng biểu chuẩn Microsoft Word (Word Table & Border Suite)**:
+3. **Bộ tùy chỉnh & Định dạng Bảng biểu chuẩn Microsoft Word (Word Table & Border Suite)**:
    - **Menu chọn đường viền chuẩn Word**: Tích hợp trọn bộ 15 tùy chọn viền với biểu tượng trực quan y hệt Word (Viền dưới, Viền trên, Viền trái, Viền phải, Không viền, Tất cả viền, Chỉ viền ngoài, Chỉ viền trong, Viền ngang bên trong, Viền dọc bên trong, Đường chéo ô \ và /, Kẻ ngang phân cách, và Xem đường lưới View Gridlines).
    - **Tùy biến đường viền & Tô bóng (Borders and Shading)**: Lựa chọn kiểu nét (Solid, Dashed, Dotted, Double, Groove), độ dày nét (0.5pt - 3pt), màu viền tùy chọn, áp dụng cho toàn bảng hoặc từng ô đang chọn.
    - **Gộp ô & Tách ô (Merge & Split Cells)**: Gộp ô sang phải (`colspan`), gộp ô xuống dưới (`rowspan`) và tách ô đã gộp (`split cell`).
@@ -27,12 +33,12 @@
    - **Khoảng đệm ô (Cell Padding)**: Tùy chỉnh đệm Siêu gọn 2px (tối ưu cho phiếu khám đoàn, bệnh viện nhiều cột hẹp), Chuẩn 5px, Thoáng đãng 9px.
    - **Dòng tiêu đề Header (`<th>`) & Sọc xen kẽ (Zebra Striping)**: Bật/tắt nhanh chóng.
    - **Đồng bộ hóa toàn diện**: Nút viền Word trực tiếp trên Toolbar, Menu Công cụ Bảng phân 4 Tab (Đường viền, Dòng & Cột, Gộp & Căn, Định dạng) và Menu ngữ cảnh chuột phải.
-2. **Bảng chọn màu chuẩn phong cách Microsoft Word (Word Style Color Palette)**:
+4. **Bảng chọn màu chuẩn phong cách Microsoft Word (Word Style Color Palette)**:
    - **Thay thế hộp thoại màu mặc định của trình duyệt**: Chuyển đổi toàn diện sang giao diện bảng chọn màu dạng ô lưới trực quan, chính xác theo chuẩn văn phòng Microsoft Word.
    - **Đầy đủ 3 chế độ màu**: Màu chữ (Font Color), Màu đánh dấu nền chữ (Highlight Color) và Màu nền ô bảng biểu (Cell Background Color).
    - **Tùy chọn chuẩn Word**: Nút "Tự động (Màu đen #000000)", nút "Không màu (Mặc định / Bỏ màu nền)", Khối 15 màu dạ quang highlight, Khối Màu chủ đề Theme Colors (10 cột x 6 hàng sắc độ), Khối Màu tiêu chuẩn Standard Colors (10 màu) và "Màu khác (More Colors)..." nhập mã Hex hoặc chọn quang phổ tự do.
    - **Đồng bộ trên cả Thanh công cụ chính và Menu chuột phải**: Tích hợp cơ chế bảo toàn vùng chọn (Selection Preservation) không làm mất đoạn chữ bôi đen, cùng thuật toán chống tràn màn hình thông minh.
-2. **Tùy chỉnh Lề trang (Margin) & Font chữ chuẩn hành chính**:
+5. **Tùy chỉnh Lề trang (Margin) & Font chữ chuẩn hành chính**:
    - **Mặc định theo file Word tải lên**: Tự động trích xuất thẻ `<w:pgMar>` từ cấu trúc OpenXML của file `.docx`, giữ trọn vẹn thông số lề (kể cả các tài liệu lề hẹp chuyên dụng khám đoàn bệnh viện ~5mm).
    - **Chuẩn Nghị định 30/2020/NĐ-CP**: Cung cấp preset thể thức văn bản hành chính Việt Nam (Trên 20mm, Dưới 20mm, Trái 30mm đóng gáy, Phải 15mm), Tiêu chuẩn (25.4mm), Hẹp (12.7mm), Vừa phải.
    - **Tùy chỉnh Millimeter (mm) linh hoạt**: Cho phép người dùng nhập trực tiếp khoảng cách lề Trên, Dưới, Trái, Phải và lưu áp dụng ngay.

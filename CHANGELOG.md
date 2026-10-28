@@ -3,6 +3,38 @@
 Tất cả thay đổi đáng chú ý của dự án **Namns Merge Word** được ghi lại tại đây theo chuẩn [Keep a Changelog](https://keepachangelog.com/) và [Semantic Versioning](https://semver.org/).  
 Múi giờ áp dụng: **Asia/Ho_Chi_Minh (GMT+7)**.
 
+## [1.0.12] - 2026-10-28
+
+### Thêm mới & Nâng cấp (Added & Enhanced)
+- **Công cụ Chỉnh sửa Hình ảnh trực tiếp trong khung soạn thảo chuẩn Microsoft Word (Inline Image Editor & Interactive Overlay):**
+  - **Khung bao quanh ảnh & 8 điểm neo co giãn (Handles)**: Nhấp chọn bất kỳ ảnh nào trong tài liệu để hiển thị viền bao xanh Word, 8 điểm neo co giãn (4 góc NW, NE, SW, SE và 4 cạnh N, S, E, W), chốt xoay tròn đỉnh và nút Layout Options.
+  - **Kéo thả co giãn ảnh mượt mà bằng chuột (Interactive Drag-to-Resize)**: Giữ và kéo các điểm neo để thay đổi kích cỡ ảnh trực tiếp trên trang theo thời gian thực (realtime), tự động tính toán và giữ nguyên tỉ lệ aspect ratio.
+  - **Menu Tùy chọn Bố cục Văn bản (Layout Options Popup chuẩn Word)**: Thiết kế chính xác theo giao diện Microsoft Word với biểu tượng minh họa SVG trực quan cho đầy đủ các chế độ:
+    1. *In Line with Text*: Ảnh nằm cùng dòng với dòng văn bản.
+    2. *With Text Wrapping*:
+       - **Square Left / Square Right**: Chữ bao quanh vuông bên trái hoặc bên phải ảnh.
+       - **Tight / Through**: Chữ bao sát quanh mép ảnh.
+       - **Top and Bottom**: Ngắt đoạn, văn bản chỉ nằm phía trên và phía dưới ảnh.
+       - **Behind Text**: Ảnh nằm chìm dưới văn bản (tạo hình nền Watermark mờ nghệ thuật).
+       - **In Front of Text**: Ảnh nổi đè lên trên văn bản kèm bóng đổ.
+    3. Tùy chọn vị trí: *Move with text* (di chuyển cùng văn bản) hoặc *Fix position on page* (cố định trên trang).
+  - **Thanh công cụ nhanh nổi (Floating Action Bar)**:
+    - *Kích thước nhanh*: 150px, 300px, 500px, 100% hoặc mở modal nhập số pixel tùy ý.
+    - *Căn lề ảnh*: Căn Trái, Căn Giữa trang, Căn Phải.
+    - *Bo góc & Đường viền*: Bo góc 0px, 4px, 8px, 16px, 50% tròn; Không viền, Viền mảnh 1px, Viền xám 2px, Đổ bóng (Shadow).
+    - *Xoay & Lật*: Xoay 90 độ, Lật ảnh ngang (Flip Horizontal).
+    - *Làm mờ (Opacity)*: Chuyển đổi nhanh độ mờ 100% - 70% - 40% phục vụ đóng dấu nền Watermark.
+    - *Đổi ảnh*: Chọn ảnh khác từ máy tính thay thế ngay tại chỗ mà vẫn giữ nguyên kích thước và cấu hình.
+    - *Xóa ảnh*: Xóa nhanh bằng nút bấm hoặc phím `Delete` / `Backspace`.
+- **Đồng bộ hóa trên Menu chuột phải (Context Menu)**:
+  - Khi click chuột phải vào bất kỳ hình ảnh nào, menu hiển thị ngay khối công cụ chuyên dụng cho hình ảnh (Bố cục wrapping, Kích cỡ, Căn lề, Xoay 90° và Xóa ảnh).
+- **Hỗ trợ phím tắt và hoàn tác**:
+  - Ấn phím `Delete` hoặc `Backspace` để xóa ảnh đang chọn.
+  - Ấn phím `Escape` hoặc nhấp chuột ra ngoài để bỏ chọn ảnh.
+  - Mọi thao tác co giãn, căn lề, đổi kiểu bao quanh đều được ghi nhận vào Undo/Redo History Stack (Ctrl+Z / Ctrl+Y).
+
+---
+
 ## [1.0.11] - 2026-10-27
 
 ### Thêm mới & Nâng cấp (Added & Enhanced)

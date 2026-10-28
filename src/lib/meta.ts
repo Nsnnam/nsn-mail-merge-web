@@ -42,14 +42,26 @@ export const APP_META: AppMeta = {
   shortName: "Merge Word",
   description: "Chỉnh sửa và trộn thư",
   appCode: "NAMNSMERGE",
-  version: "1.0.11",
-  date: "2026-10-27",
+  version: "1.0.12",
+  date: "2026-10-28",
   author: "Nguyễn Sơn Nam (Nsnnam)",
   authorShort: "NSN",
   role: "Tác giả · Tiện ích HIS / Excel / Tự động hóa văn bản",
   github: "https://github.com/Nsnnam/nsn-mail-merge-web",
   timezone: "Asia/Ho_Chi_Minh",
   changelog: [
+    {
+      version: "1.0.12",
+      date: "2026-10-28",
+      changes: [
+        "Tích hợp bộ công cụ Chỉnh sửa Hình ảnh trực tiếp trong khung soạn thảo chuẩn Microsoft Word (Inline Image Editor & Interactive Overlay): Nhấp chọn bất kỳ ảnh nào để kích hoạt khung bao viền thông minh kèm 8 điểm neo co giãn (NW, N, NE, E, SE, S, SW, W), chốt xoay tròn đỉnh và nút Layout Options.",
+        "Kéo thả co giãn ảnh tương tác thời gian thực (Interactive Drag-to-Resize): Hỗ trợ kéo các nút mốc ở góc hoặc cạnh để phóng to, thu nhỏ ảnh mượt mà bằng chuột, tự động tính toán và giữ nguyên tỉ lệ aspect ratio của ảnh.",
+        "Bảng Tùy chọn Bố cục Văn bản (Layout Options Popup chuẩn Word): Mở menu vòm cung chuẩn Microsoft Word với đầy đủ 2 nhóm: In Line with Text (cùng dòng) và With Text Wrapping (Square Left/Right bao trái/phải, Tight bao sát mép, Top & Bottom ngắt đoạn trên/dưới, Behind Text chìm dưới chữ watermark mờ, In Front of Text đè lên chữ) kèm tùy chọn Move with text / Fix position.",
+        "Thanh công cụ nhanh nổi (Floating Image Action Bar): Thay đổi nhanh kích cỡ (150px, 300px, 500px, 100%, hoặc nhập số pixel chính xác), căn lề ảnh (Trái, Giữa, Phải), bo góc (0px, 4px, 8px, 16px, 50% tròn), đường viền & đổ bóng (Shadow), xoay 90 độ, lật ảnh ngang, làm mờ watermark (Opacity), đổi ảnh khác từ máy tính và xóa ảnh.",
+        "Menu ngữ cảnh chuột phải (Context Menu) cho hình ảnh: Nhận diện ảnh thông minh khi click chuột phải, tích hợp trọn bộ thao tác wrapping, kích cỡ, căn lề, xoay và xóa ảnh.",
+        "Hỗ trợ phím tắt tiện lợi: Phím Delete / Backspace để xóa ảnh đang chọn tức thì; phím Escape để hủy chọn ảnh; tự động lưu lịch sử thao tác vào Undo/Redo Stack."
+      ]
+    },
     {
       version: "1.0.11",
       date: "2026-10-27",

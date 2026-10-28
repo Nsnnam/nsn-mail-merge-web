@@ -51,6 +51,7 @@ import { WordBorderPicker, BorderPresetType, BorderCustomOptions } from './WordB
 import { WordTableInsertPicker } from './WordTableInsertPicker';
 import { WordImageModal } from './WordImageModal';
 import { WordIconSymbolPicker } from './WordIconSymbolPicker';
+import { WordImageEditorOverlay, TextWrappingType } from './WordImageEditorOverlay';
 import { Image as ImageIcon } from 'lucide-react';
 
 export interface DocumentEditorHandle {
@@ -162,6 +163,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     x: number;
     y: number;
     inTable: boolean;
+    isImage: boolean;
     hasSelection: boolean;
     selectedText: string;
   }>({
@@ -169,9 +171,13 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     x: 0,
     y: 0,
     inTable: false,
+    isImage: false,
     hasSelection: false,
     selectedText: ''
   });
+
+  // State cho ảnh đang được chọn để chỉnh sửa trực tiếp chuẩn Word
+  const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
 
   const updateUndoRedoState = () => {
     setCanUndo(historyIndexRef.current > 0);
@@ -257,9 +263,17 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
       if (contextMenu.isOpen && contextMenuRef.current && !contextMenuRef.current.contains(target)) {
         setContextMenu(prev => ({ ...prev, isOpen: false }));
       }
+      // Bỏ chọn ảnh nếu click ra ngoài editor và không phải click vào thanh công cụ ảnh
+      if (selectedImage && editorRef.current && !editorRef.current.contains(target)) {
+        const targetEl = target as HTMLElement;
+        if (!targetEl.closest?.('[style*="z-index: 999"]')) {
+          setSelectedImage(null);
+        }
+      }
     };
     const handleKeyDownGlobal = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (selectedImage) setSelectedImage(null);
         if (contextMenu.isOpen) setContextMenu(prev => ({ ...prev, isOpen: false }));
         if (isTableMenuOpen) setIsTableMenuOpen(false);
         if (isSymbolsOpen) setIsSymbolsOpen(false);
@@ -489,6 +503,126 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
     if (e.key === 'Tab') {
       e.preventDefault();
       insertTabSpacer();
+      return;
+    }
+
+    // Xóa ảnh khi đang chọn ảnh bằng phím Delete hoặc Backspace
+    if (selectedImage && (e.key === 'Delete' || e.key === 'Backspace')) {
+      e.preventDefault();
+      deleteSelectedImage();
+      return;
+    }
+  };
+
+  // === THAO TÁC HÌNH ẢNH TRỰC TIẾP TRONG SOẠN THẢO CHUẨN MICROSOFT WORD ===
+  const handleEditorClick = (e: React.MouseEvent) => {
+    if (isPreviewMode) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'IMG') {
+      setSelectedImage(target as HTMLImageElement);
+    } else {
+      // Nếu click ra ngoài ảnh và không phải đang click vào overlay
+      if (selectedImage && !target.closest?.('[style*="z-index: 999"]')) {
+        setSelectedImage(null);
+      }
+    }
+  };
+
+  const deleteSelectedImage = () => {
+    if (selectedImage) {
+      selectedImage.remove();
+      setSelectedImage(null);
+      if (editorRef.current && !isPreviewMode) {
+        commitHtmlChange(editorRef.current.innerHTML, true);
+      }
+    }
+  };
+
+  const rotateSelectedImage = () => {
+    if (!selectedImage) return;
+    const transform = selectedImage.style.transform || '';
+    const matchRot = transform.match(/rotate\((-?\d+)deg\)/);
+    const curRot = matchRot ? parseInt(matchRot[1], 10) : 0;
+    const newRot = (curRot + 90) % 360;
+    selectedImage.style.transform = newRot === 0 ? '' : `rotate(${newRot}deg)`;
+    if (editorRef.current && !isPreviewMode) {
+      commitHtmlChange(editorRef.current.innerHTML, true);
+    }
+  };
+
+  const applyContextImgWrapping = (type: TextWrappingType) => {
+    if (!selectedImage) return;
+    selectedImage.style.float = 'none';
+    selectedImage.style.display = 'inline-block';
+    selectedImage.style.clear = 'none';
+    selectedImage.style.position = 'static';
+    selectedImage.style.zIndex = 'auto';
+    selectedImage.style.margin = '4px';
+
+    if (type === 'inline') {
+      selectedImage.style.display = 'inline-block';
+      selectedImage.style.verticalAlign = 'middle';
+      selectedImage.style.margin = '4px 8px';
+    } else if (type === 'square-left') {
+      selectedImage.style.float = 'left';
+      selectedImage.style.margin = '6px 16px 8px 0';
+      selectedImage.style.display = 'inline-block';
+    } else if (type === 'square-right') {
+      selectedImage.style.float = 'right';
+      selectedImage.style.margin = '6px 0 8px 16px';
+      selectedImage.style.display = 'inline-block';
+    } else if (type === 'top-bottom') {
+      selectedImage.style.display = 'block';
+      selectedImage.style.margin = '14px auto';
+      selectedImage.style.clear = 'both';
+      selectedImage.style.float = 'none';
+    } else if (type === 'behind') {
+      selectedImage.style.position = 'relative';
+      selectedImage.style.zIndex = '0';
+      selectedImage.style.opacity = '0.35';
+      selectedImage.style.display = 'inline-block';
+      selectedImage.style.margin = '6px';
+    } else if (type === 'in-front') {
+      selectedImage.style.position = 'relative';
+      selectedImage.style.zIndex = '20';
+      selectedImage.style.opacity = '1';
+      selectedImage.style.display = 'inline-block';
+      selectedImage.style.boxShadow = '0 6px 16px rgba(0,0,0,0.18)';
+      selectedImage.style.margin = '6px';
+    }
+
+    if (editorRef.current && !isPreviewMode) {
+      commitHtmlChange(editorRef.current.innerHTML, true);
+    }
+  };
+
+  const applyContextImgWidth = (widthVal: string) => {
+    if (!selectedImage) return;
+    selectedImage.style.width = widthVal;
+    selectedImage.style.height = 'auto';
+    if (editorRef.current && !isPreviewMode) {
+      commitHtmlChange(editorRef.current.innerHTML, true);
+    }
+  };
+
+  const applyContextImgAlign = (align: 'left' | 'center' | 'right') => {
+    if (!selectedImage) return;
+    const parent = selectedImage.parentElement;
+    if (parent && parent !== editorRef.current && (parent.tagName === 'DIV' || parent.tagName === 'P')) {
+      parent.style.textAlign = align;
+    }
+    if (align === 'left') {
+      selectedImage.style.marginLeft = '0';
+      selectedImage.style.marginRight = 'auto';
+    } else if (align === 'right') {
+      selectedImage.style.marginLeft = 'auto';
+      selectedImage.style.marginRight = '0';
+    } else {
+      selectedImage.style.marginLeft = 'auto';
+      selectedImage.style.marginRight = 'auto';
+    }
+    if (editorRef.current && !isPreviewMode) {
+      commitHtmlChange(editorRef.current.innerHTML, true);
     }
   };
 
@@ -540,12 +674,17 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
       contextTargetCellRef.current = null;
     }
 
+    const isImg = target.tagName === 'IMG';
+    if (isImg && editorRef.current?.contains(target)) {
+      setSelectedImage(target as HTMLImageElement);
+    }
+
     const sel = window.getSelection();
     const selText = sel ? sel.toString().trim() : '';
     const hasSelection = selText.length > 0;
 
     const menuWidth = 320;
-    const menuHeight = cell ? 540 : 380;
+    const menuHeight = isImg ? 450 : cell ? 540 : 380;
     let posX = e.clientX;
     let posY = e.clientY;
 
@@ -561,6 +700,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
       x: posX,
       y: posY,
       inTable: Boolean(cell && table),
+      isImage: isImg,
       hasSelection,
       selectedText: selText
     });
@@ -2405,6 +2545,7 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
             contentEditable={!isPreviewMode}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
+            onClick={handleEditorClick}
             onMouseUp={saveSelection}
             onKeyUp={saveSelection}
             onFocus={saveSelection}
@@ -2419,6 +2560,26 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
           />
         </div>
       </div>
+
+      {/* OVERLAY CHỈNH SỬA HÌNH ẢNH TRỰC TIẾP TRONG SOẠN THẢO CHUẨN MICROSOFT WORD */}
+      {!isPreviewMode && selectedImage && (
+        <WordImageEditorOverlay
+          image={selectedImage}
+          editorElement={editorRef.current}
+          onUpdate={() => {
+            if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
+          }}
+          onDelete={deleteSelectedImage}
+          onDeselect={() => setSelectedImage(null)}
+          onReplaceImage={(newSrc) => {
+            if (selectedImage) {
+              selectedImage.src = newSrc;
+              if (editorRef.current) commitHtmlChange(editorRef.current.innerHTML, true);
+            }
+          }}
+          theme={theme}
+        />
+      )}
 
       {/* CONTEXT MENU CHUỘT PHẢI THÔNG MINH (BẢNG BIỂU & ĐỊNH DẠNG VĂN BẢN) */}
       {contextMenu.isOpen && !isPreviewMode && (
@@ -2439,7 +2600,12 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
           {/* Header Context Menu */}
           <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-              {contextMenu.inTable ? (
+              {contextMenu.isImage ? (
+                <>
+                  <ImageIcon className="w-3.5 h-3.5 text-sky-600" />
+                  <span>Chỉnh sửa Hình ảnh (Image Tools)</span>
+                </>
+              ) : contextMenu.inTable ? (
                 <>
                   <TableIcon className="w-3.5 h-3.5 text-blue-600" />
                   <span>Công cụ Bảng &amp; Soạn thảo</span>
@@ -2467,6 +2633,115 @@ export const DocumentEditorPreview = forwardRef<DocumentEditorHandle, DocumentEd
               ✕
             </button>
           </div>
+
+          {/* NẾU CHUỘT PHẢI VÀO HÌNH ẢNH: KHỐI CÔNG CỤ HÌNH ẢNH CHUYÊN NGHIỆP */}
+          {contextMenu.isImage && selectedImage && (
+            <div className="border border-sky-200 bg-sky-50/60 rounded-xl p-2.5 space-y-2">
+              <div className="flex items-center justify-between border-b border-sky-100 pb-1.5">
+                <span className="text-[11px] font-bold text-sky-900 flex items-center gap-1">
+                  <ImageIcon className="w-3.5 h-3.5 text-sky-600" />
+                  Tùy chọn Hình ảnh (Image Suite)
+                </span>
+                <span className="text-[10px] text-sky-700 font-semibold bg-sky-100/80 px-1.5 py-0.2 rounded">
+                  {Math.round(selectedImage.offsetWidth)}px
+                </span>
+              </div>
+
+              {/* Bố cục văn bản (Layout Wrapping) chuẩn Microsoft Word */}
+              <div>
+                <span className="text-[10px] font-semibold text-slate-600 block mb-1">Bố cục văn bản (Wrapping):</span>
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    onClick={() => { applyContextImgWrapping('inline'); closeContextMenu(); }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] font-medium border border-slate-200 text-center"
+                    title="Nằm cùng dòng với chữ (In line with text)"
+                  >
+                    Cùng dòng
+                  </button>
+                  <button
+                    onClick={() => { applyContextImgWrapping('square-left'); closeContextMenu(); }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] font-medium border border-slate-200 text-center"
+                    title="Bao quanh bên trái (Square left)"
+                  >
+                    Bao trái
+                  </button>
+                  <button
+                    onClick={() => { applyContextImgWrapping('square-right'); closeContextMenu(); }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] font-medium border border-slate-200 text-center"
+                    title="Bao quanh bên phải (Square right)"
+                  >
+                    Bao phải
+                  </button>
+                  <button
+                    onClick={() => { applyContextImgWrapping('top-bottom'); closeContextMenu(); }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] font-medium border border-slate-200 text-center"
+                    title="Ngắt đoạn trên và dưới (Top and Bottom)"
+                  >
+                    Trên-Dưới
+                  </button>
+                  <button
+                    onClick={() => { applyContextImgWrapping('behind'); closeContextMenu(); }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] font-medium border border-slate-200 text-center"
+                    title="Nằm chìm dưới chữ (Behind text / Watermark)"
+                  >
+                    Dưới chữ
+                  </button>
+                  <button
+                    onClick={() => { applyContextImgWrapping('in-front'); closeContextMenu(); }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] font-medium border border-slate-200 text-center"
+                    title="Đè lên trên chữ (In front of text)"
+                  >
+                    Đè lên chữ
+                  </button>
+                </div>
+              </div>
+
+              {/* Kích cỡ nhanh */}
+              <div>
+                <span className="text-[10px] font-semibold text-slate-600 block mb-1">Kích cỡ ảnh:</span>
+                <div className="grid grid-cols-4 gap-1">
+                  <button onClick={() => { applyContextImgWidth('150px'); closeContextMenu(); }} onMouseDown={(e) => e.preventDefault()} className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200 text-center">150px</button>
+                  <button onClick={() => { applyContextImgWidth('300px'); closeContextMenu(); }} onMouseDown={(e) => e.preventDefault()} className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200 text-center font-bold">300px</button>
+                  <button onClick={() => { applyContextImgWidth('500px'); closeContextMenu(); }} onMouseDown={(e) => e.preventDefault()} className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200 text-center">500px</button>
+                  <button onClick={() => { applyContextImgWidth('100%'); closeContextMenu(); }} onMouseDown={(e) => e.preventDefault()} className="p-1 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200 text-center">100%</button>
+                </div>
+              </div>
+
+              {/* Căn lề ảnh */}
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-semibold text-slate-600">Căn lề:</span>
+                <button onClick={() => { applyContextImgAlign('left'); closeContextMenu(); }} onMouseDown={(e) => e.preventDefault()} className="flex-1 py-0.5 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200">Trái</button>
+                <button onClick={() => { applyContextImgAlign('center'); closeContextMenu(); }} onMouseDown={(e) => e.preventDefault()} className="flex-1 py-0.5 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200 font-bold">Giữa</button>
+                <button onClick={() => { applyContextImgAlign('right'); closeContextMenu(); }} onMouseDown={(e) => e.preventDefault()} className="flex-1 py-0.5 bg-white hover:bg-slate-100 rounded text-[10px] border border-slate-200">Phải</button>
+              </div>
+
+              {/* Xoay & Xóa ảnh */}
+              <div className="flex items-center gap-1 pt-1 border-t border-sky-100">
+                <button
+                  onClick={() => { rotateSelectedImage(); closeContextMenu(); }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="flex-1 py-1 bg-white hover:bg-slate-100 rounded text-[10px] font-medium border border-slate-200 flex items-center justify-center gap-1"
+                >
+                  <RotateCw className="w-3 h-3" />
+                  <span>Xoay 90°</span>
+                </button>
+                <button
+                  onClick={() => { deleteSelectedImage(); closeContextMenu(); }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="flex-1 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded text-[10px] font-semibold border border-rose-200 flex items-center justify-center gap-1"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Xóa ảnh</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Mini Toolbar: Undo, Redo, Bold, Italic, Underline, Strikethrough, Color, Highlight, ClearFormat */}
           <div className="flex items-center gap-1 bg-slate-50 border border-slate-200/80 rounded-lg p-1 flex-wrap">

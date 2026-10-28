@@ -144,3 +144,15 @@
   margin-top: 0;
   margin-bottom: 0.35em;
 }
+
+/* Kiểu tương tác chỉnh sửa ảnh trực tiếp trong khung soạn thảo chuẩn Word */
+.document-content img {
+  cursor: pointer;
+  max-width: 100%;
+  transition: outline 0.15s ease, filter 0.15s ease;
+}
+
+.document-content img:hover {
+  outline: 2px dashed #0284c7;
+  outline-offset: 2px;
+}
